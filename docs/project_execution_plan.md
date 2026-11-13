@@ -301,3 +301,8 @@ NSE Integrated Filing returns no MCX listing rows, including after the symbol-on
 **Data boundary:** This fallback imports the consolidated P&L/EPS fields only. It does not yet import MCX standalone data, balance-sheet instant facts or cash-flow figures. MCX NSE XBRL listing coverage remains zero; the BSE source is a clearly labelled separate-source fallback.
 
 **Still open:** Siemens's disclosed 18-month 2024-10-01 to 2026-03-31 transition year has no matching 18-month context in the inspected NSE XBRL attachment; normal annual extraction is deliberately rejected for that target. The cross-sector batch and full 64-company import must wait for these source-specific rules and remaining issuer checks to pass.
+
+
+### MCX workflow path correction — 14 November 2026
+
+The first full workflow dispatch proved the MCX observations were imported (24 rows), but artifact inspection found they had been written to a second SQLite file because the manual import path omitted the importer's github-<run-id> folder prefix. The workflow now targets the exact same data/financials/runs/github-<run-id>/financials.sqlite file created by the NSE ingestion step. A fresh run must verify MCX and NSE records coexist in the single database before this sub-gate is considered complete.

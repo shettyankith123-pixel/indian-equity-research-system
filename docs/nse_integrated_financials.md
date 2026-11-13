@@ -6,7 +6,7 @@ The scheduled ingestion uses NSE's Integrated Filing - Financials XBRL attachmen
 
 The file data/universe/indian_watchlist_companies.csv contains the 64 imported INDmoney watchlist companies with the display name used to query NSE. The ingestion requests up to four most recent quarter-end periods and three latest March year-end periods for each available reporting basis (standalone and consolidated).
 
-Quarterly flow values use the XBRL OneD duration context. Annual flow values use FourD. Each observation records the period dates, reporting basis, filing publication date, NSE XBRL URL, sequence/revision identifier, retrieval timestamp and source hash.
+Quarter, half-year and annual flow values are selected by the actual XBRL context start/end dates (roughly 70–120, 150–220 and 300–380 days respectively), not by an issuer-specific context ID. This handles non-standard context names and transition periods. Each observation records the period dates, reporting basis, filing publication date, NSE XBRL URL, sequence/revision identifier, retrieval timestamp and source hash.
 
 ## Units and financial metric policy
 

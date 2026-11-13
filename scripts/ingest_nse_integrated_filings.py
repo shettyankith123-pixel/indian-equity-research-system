@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from nse_xbrl import NSEClient, parse_xbrl
+from indian_equity_research.ingestion.xbrl_contexts import parse_iso_or_nse, choose_duration_context
 
 from indian_equity_research.models.financials import (
     FinancialObservation,
@@ -63,19 +64,6 @@ FLOW_METRICS = {
     "capital_expenditure",
 }
 
-def parse_iso_or_nse(value: Any) -> date | None:
-    if not value:
-        return None
-    text = str(value).strip()
-    for fmt in ("%d-%b-%Y %H:%M:%S", "%d-%b-%Y", "%Y-%m-%d"):
-        try:
-            return datetime.strptime(text, fmt).date()
-        except ValueError:
-            continue
-    try:
-        return date.fromisoformat(text[:10])
-    except ValueError:
-        return None
 
 def row_basis(row: dict[str, Any]) -> str:
     raw = str(row.get("consolidated") or row.get("basis") or "").strip().casefold()
@@ -112,26 +100,18 @@ def decimal_fact(facts: dict[str, Any], names: tuple[str, ...], context: str) ->
             continue
     return None, None
 
-def context_dates(contexts: dict[str, Any], context_id: str) -> tuple[date | None, date | None]:
-    context = contexts.get(context_id) or {}
-    start = parse_iso_or_nse(context.get("start") or context.get("start_date"))
-    end = parse_iso_or_nse(context.get("end") or context.get("end_date") or context.get("instant"))
-    return start, end
-
 def extract_observations(
     symbol: str,
     row: dict[str, Any],
     xml_text: str,
-    context_id: str,
+    expected_end: date,
     period_kind: str,
     retrieved_at: datetime,
 ) -> tuple[list[FinancialObservation], dict[str, Any]]:
     parsed = parse_xbrl(xml_text)
     facts = parsed.get("facts") or {}
     contexts = parsed.get("contexts") or {}
-    start_date, end_date = context_dates(contexts, context_id)
-    if start_date is None or end_date is None:
-        raise ValueError(f"missing {context_id} duration context; available={list(contexts)[:20]}")
+    context_id, start_date, end_date = choose_duration_context(contexts, expected_end, period_kind)
     if period_kind == "quarter" and (end_date - start_date).days > 140:
         raise ValueError(f"quarter context unexpectedly spans {(end_date-start_date).days} days")
     if period_kind == "year" and (end_date - start_date).days < 300:
@@ -140,7 +120,7 @@ def extract_observations(
     basis = row_basis(row)
     if not basis:
         raise ValueError("filing has no recognised standalone/consolidated basis")
-    annualisation = Decimal("4") if period_kind == "quarter" else Decimal("1")
+    annualisation = Decimal("4") if period_kind == "quarter" else (Decimal("2") if period_kind == "half_year" else Decimal("1"))
     period = FinancialPeriod(
         start_date=start_date,
         end_date=end_date,
@@ -238,7 +218,7 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path, default=Path("data/financials"))
     parser.add_argument("--symbols", default="", help="Optional comma-separated symbol subset for validation.")
     parser.add_argument("--quarter-end", default="2026-09-30")
-    parser.add_argument("--annual-end", default="2026-03-31")
+    parser.add_argument("--annual-end", default=date.today().isoformat())
     parser.add_argument("--quarter-count", type=int, default=4, help="Number of most recent quarter periods per basis.")
     parser.add_argument("--annual-count", type=int, default=3, help="Number of most recent March year-end periods per basis.")
     parser.add_argument("--page-size", type=int, default=100)
@@ -281,6 +261,7 @@ def main() -> int:
             "sector": company.get("sector", ""),
             "listing_ok": False,
             "quarter_filings": 0,
+            "half_year_filings": 0,
             "annual_filings": 0,
             "observations": 0,
             "status": "",
@@ -311,14 +292,15 @@ def main() -> int:
                         (d.month == 12 and d.day == 31)
                     )
                 ][:max(1, args.quarter_count)]
+                fiscal_year_end = company.get("fiscal_year_end", "03-31").strip()
                 annual_dates = [
                     d for d in available_dates
-                    if d <= annual_end and d.month == 3 and d.day == 31
+                    if d <= annual_end and f"{d.month:02d}-{d.day:02d}" == fiscal_year_end
                 ][:max(1, args.annual_count)]
 
-                for label, period_dates, context_id, period_kind in (
-                    ("quarter", quarter_dates, "OneD", "quarter"),
-                    ("annual", annual_dates, "FourD", "year"),
+                for label, period_dates, period_kind in (
+                    ("quarter", quarter_dates, "quarter"),
+                    ("annual", annual_dates, "year"),
                 ):
                     for target in period_dates:
                         filing = select_filing(rows, target, basis)
@@ -328,33 +310,55 @@ def main() -> int:
                         if not xbrl_url:
                             row_coverage["errors"].append(f"{label}/{basis}/{target}: no XBRL URL")
                             continue
+                        stored_label = label
                         try:
                             if xbrl_url not in xbrl_cache:
-                                xml_text = client.get_integrated_xbrl(xbrl_url)
+                                xml_text = None
+                                last_error = None
+                                for attempt in range(1, 4):
+                                    try:
+                                        xml_text = client.get_integrated_xbrl(xbrl_url)
+                                        if xml_text and "<" in xml_text[:100]:
+                                            break
+                                        last_error = ValueError("XBRL attachment download returned no XML")
+                                    except Exception as download_error:
+                                        last_error = download_error
+                                    if attempt < 3:
+                                        time.sleep(attempt * 2)
                                 if not xml_text or "<" not in xml_text[:100]:
-                                    raise ValueError("XBRL attachment download returned no XML")
+                                    raise ValueError(f"XBRL download failed after 3 attempts: {last_error}")
                                 xbrl_cache[xbrl_url] = xml_text
-                            observations, summary = extract_observations(
-                                symbol, filing, xbrl_cache[xbrl_url], context_id, period_kind, retrieved_at
-                            )
+                            try:
+                                observations, summary = extract_observations(
+                                    symbol, filing, xbrl_cache[xbrl_url], target, period_kind, retrieved_at
+                                )
+                            except ValueError as primary_error:
+                                if label != "quarter":
+                                    raise
+                                # Some issuers report a half-year duration for the same
+                                # period end; store it as half-year, never as a quarter.
+                                observations, summary = extract_observations(
+                                    symbol, filing, xbrl_cache[xbrl_url], target, "half_year", retrieved_at
+                                )
+                                stored_label = "half_year"
                             all_observations.extend(observations)
                             filing_summaries.append(summary)
                             row_coverage["observations"] += len(observations)
-                            row_coverage[f"{label}_filings"] += 1
+                            row_coverage[f"{stored_label}_filings"] += 1
                             print(
                                 f"  {label} {basis}: {summary['period_start']}..{summary['period_end']} "
                                 f"{len(observations)} observations",
                                 flush=True,
                             )
                         except Exception as exc:
-                            message = f"{label}/{basis}/{target}: {type(exc).__name__}: {exc}"
+                            message = f"{stored_label}/{basis}/{target}: {type(exc).__name__}: {exc}"
                             row_coverage["errors"].append(message)
                             failures.append(f"{symbol} {message}")
                         time.sleep(max(0.0, args.delay_seconds))
 
-            if row_coverage["quarter_filings"] and row_coverage["annual_filings"]:
-                row_coverage["status"] = "quarter_and_annual_loaded"
-            elif row_coverage["quarter_filings"] or row_coverage["annual_filings"]:
+            if (row_coverage["quarter_filings"] or row_coverage["half_year_filings"]) and row_coverage["annual_filings"]:
+                row_coverage["status"] = "quarter_or_half_year_and_annual_loaded"
+            elif row_coverage["quarter_filings"] or row_coverage["half_year_filings"] or row_coverage["annual_filings"]:
                 row_coverage["status"] = "partial_period_coverage"
             elif row_coverage["errors"]:
                 row_coverage["status"] = "filing_parse_error"
@@ -404,7 +408,7 @@ def main() -> int:
             })
 
     coverage_path = output_dir / "filing_coverage.csv"
-    coverage_fields = ["symbol", "issuer_name", "sector", "listing_ok", "listing_rows", "quarter_filings", "annual_filings", "observations", "status", "errors"]
+    coverage_fields = ["symbol", "issuer_name", "sector", "listing_ok", "listing_rows", "quarter_filings", "half_year_filings", "annual_filings", "observations", "status", "errors"]
     with coverage_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=coverage_fields)
         writer.writeheader()
@@ -420,8 +424,9 @@ def main() -> int:
     summary = {
         "retrieved_at": retrieved_at.isoformat(),
         "universe_count": len(companies),
-        "company_count_with_any_filing": sum(1 for r in coverage if r["quarter_filings"] or r["annual_filings"]),
+        "company_count_with_any_filing": sum(1 for r in coverage if r["quarter_filings"] or r["half_year_filings"] or r["annual_filings"]),
         "quarter_company_count": sum(1 for r in coverage if r["quarter_filings"]),
+        "half_year_company_count": sum(1 for r in coverage if r["half_year_filings"]),
         "annual_company_count": sum(1 for r in coverage if r["annual_filings"]),
         "observation_count": inserted,
         "sqlite_database": str(db_path),
@@ -432,7 +437,7 @@ def main() -> int:
     }
     (output_dir / "ingest_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary, indent=2))
-    if args.fail_on_missing and (summary["quarter_company_count"] < len(companies) or summary["annual_company_count"] < len(companies)):
+    if args.fail_on_missing and (summary["quarter_company_count"] + summary["half_year_company_count"] < len(companies) or summary["annual_company_count"] < len(companies)):
         return 2
     if inserted == 0:
         return 3

@@ -114,41 +114,56 @@ def parse_udiff_zip(payload: bytes, *, expected_date: Optional[date] = None) -> 
     return all_rows
 
 
-def download_udiff_bhavcopy(trading_date: date, *, timeout: int = 30) -> tuple[bytes, str]:
-    """Download an official NSE archive. Fetches reports page first, then uses NSE archive URL."""
-    ymd = trading_date.strftime("%Y%m%d")
-    filename = f"BhavCopy_NSE_CM_0_0_0_{ymd}_F_0000.csv.zip"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (compatible; IndianEquityResearchSystem/0.1; +https://github.com)",
-        "Accept": "text/html,application/zip,application/octet-stream,*/*",
-        "Referer": REPORTS_URL,
-        "Accept-Language": "en-US,en;q=0.9",
-    }
-    # Establish a cookie session where NSE serves its archive behind the reports page.
+def download_udiff_bhavcopy(
+    trading_date: date, *, timeout: int = 90, attempts: int = 3
+) -> tuple[bytes, str]:
+    """Download NSE's UDiFF archive directly, retrying transient archive/network failures.
+
+    The reports landing page is deliberately not fetched first: it is slow and is not
+    required to construct NSE's documented archive URL. NSE archive access may still
+    be transiently unavailable, so retries are bounded and every response is validated.
+    """
+    from time import sleep
     from http.cookiejar import CookieJar
     from urllib.request import HTTPCookieProcessor, build_opener
+
+    ymd = trading_date.strftime("%Y%m%d")
+    filename = f"BhavCopy_NSE_CM_0_0_0_{ymd}_F_0000.csv.zip"
+    url = f"{ARCHIVE_BASE}/{filename}"
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/zip,application/octet-stream,*/*",
+        "Referer": REPORTS_URL,
+        "Accept-Language": "en-US,en;q=0.9",
+        "Connection": "keep-alive",
+    }
     opener = build_opener(HTTPCookieProcessor(CookieJar()))
-    page_request = Request(REPORTS_URL, headers=headers)
-    try:
-        with opener.open(page_request, timeout=timeout) as response:
-            page = response.read().decode("utf-8", errors="replace")
-        links = re.findall(r"(?:href|data-href)=[\"']([^\"']*" + re.escape(filename) + r")[\"']", page, flags=re.I)
-        if links:
-            url = links[0]
-            if url.startswith("/"):
-                url = "https://www.nseindia.com" + url
-            elif not url.startswith("http"):
-                url = ARCHIVE_BASE + "/" + url.lstrip("/")
-        else:
-            url = f"{ARCHIVE_BASE}/{filename}"
+    last_error: Exception | None = None
+
+    for attempt in range(1, max(1, attempts) + 1):
         request = Request(url, headers=headers)
-        with opener.open(request, timeout=timeout) as response:
-            payload = response.read()
-        if not payload.startswith(b"PK"):
-            raise ValueError("NSE archive endpoint did not return a ZIP file")
-        return payload, url
-    except (HTTPError, URLError, TimeoutError) as exc:
-        raise RuntimeError(f"Could not download NSE UDiFF bhavcopy for {trading_date}: {exc}") from exc
+        try:
+            with opener.open(request, timeout=timeout) as response:
+                payload = response.read()
+            if not payload.startswith(b"PK"):
+                raise ValueError("NSE archive endpoint did not return a ZIP file")
+            # Validate ZIP central directory before returning data to the importer.
+            with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+                if not any(name.lower().endswith(".csv") for name in archive.namelist()):
+                    raise ValueError("NSE ZIP archive contains no CSV file")
+            return payload, url
+        except (HTTPError, URLError, TimeoutError, OSError, ValueError) as exc:
+            last_error = exc
+            if attempt < max(1, attempts):
+                sleep(min(2 ** (attempt - 1), 8))
+
+    raise RuntimeError(
+        f"Could not download NSE UDiFF bhavcopy for {trading_date} "
+        f"after {max(1, attempts)} attempt(s): {last_error}"
+    ) from last_error
 
 
 def write_eod_csv(rows: list[EodPrice], destination: Path) -> None:

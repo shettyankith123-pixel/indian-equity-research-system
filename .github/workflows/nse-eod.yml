@@ -1,0 +1,46 @@
+name: NSE EOD Market Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      trading_date:
+        description: "Exchange trading date (YYYY-MM-DD); leave blank for today"
+        required: false
+        type: string
+  schedule:
+    # 18:15 Asia/Kolkata, Monday-Friday. NSE holidays/non-trading days are handled as no-data runs.
+    - cron: "45 12 * * 1-5"
+
+permissions:
+  contents: read
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install project
+        run: pip install -e ".[market]"
+      - name: Fetch official NSE UDiFF bhavcopy
+        env:
+          REQUESTED_DATE: ${{ inputs.trading_date }}
+        run: |
+          if [ -n "$REQUESTED_DATE" ]; then
+            ies fetch-nse-eod --date "$REQUESTED_DATE" --db data/research.db
+          else
+            ies fetch-nse-eod --db data/research.db
+          fi
+      - name: Publish data snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: nse-eod-${{ github.run_id }}
+          path: |
+            data/market/*.csv
+            data/research.db
+          if-no-files-found: error
+          retention-days: 90

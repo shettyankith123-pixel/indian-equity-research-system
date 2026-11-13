@@ -1,48 +1,28 @@
 # Indian Equity Research System
 
-A private, evidence-led research platform for Indian equities. The system is designed to combine exchange and broker data, company disclosures, reproducible financial calculations, AI-assisted document/news analysis, and human-reviewed investment decisions.
+A private, evidence-led research platform for Indian equities, built for a **moderate-to-high risk appetite and a 7–10 year wealth-creation horizon**. Its purpose is to identify attractive long-term opportunities, not to default to WAIT or produce BUY signals without evidence.
 
-## Objectives
+## Investor mandate
 
-- Research the 64-stock personal watchlist and progressively expand to a broader NSE-listed equity universe.
-- Keep long-term investing (default 7–10 years) separate from explicitly requested swing-trading analysis.
-- Produce company, sector, portfolio, discovery and research-review reports.
-- Track financial trends, asset quality, profitability, capital, valuation, governance, risk and thesis changes.
-- Record source, publication date, financial period, retrieval time and data-quality status for every material input.
-- Compare prior expectations with subsequent results and market outcomes.
+- Long-term investing by default; swing-trading analysis only when explicitly requested.
+- Quality businesses, durable earnings growth and reasonable valuations.
+- Staged entries and explicit entry/valuation triggers.
+- BUY and ACCUMULATE are permitted when research and valuation gates pass.
+- No fabricated prices, financial figures, fair values, cash balances or broker data.
 
-## Current status
+## Current capabilities
 
-The repository contains research rules, the imported watchlist, financial data models, bank-ratio calculations, CSV ingestion, SQLite persistence, a CLI and tests. The data pipeline is usable for validated financial statement CSV imports.
-
-**Not yet implemented:** automated NSE/INDmoney provider connections inside GitHub Actions, official filing downloads and parsing, persistent hosted database, external AI model endpoints, scheduled research runs and automated report generation. Connected chat integrations are available in ChatGPT, but are not automatically callable from this GitHub repository.
-
-## Repository structure
-
-```
-config/
-  settings.example.yaml
-  watchlists/indian_watchlist.yaml
-data/
-  templates/financial_observations.csv
-docs/
-  architecture.md
-  data_quality.md
-  financial_data_model.md
-  financial_ingestion.md
-  research_methodology.md
-src/indian_equity_research/
-  analytics/
-  ingestion/
-  models/
-  storage/
-  valuation/
-  cli.py
-tests/
-.github/workflows/tests.yml
-.env.example
-pyproject.toml
-```
+- Financial observation model with source, period, basis and publication provenance.
+- CSV financial-statement ingestion and SQLite persistence.
+- Bank financial ratio calculations and growth analytics.
+- NSE UDiFF official EOD bhavcopy ZIP downloader/parser, SQLite market-price store and EOD equity breadth/leader-laggard market scan.
+- Investment decision engine with BUY, ACCUMULATE, HOLD, WAIT, ASSESS, REDUCE, EXIT and AVOID.
+- Full decision register for all 64 configured watchlist symbols plus any additional candidate entered in the research-input file; company and sector scan commands use the same transparent decision engine.
+- Portfolio transaction import with average-cost holdings and realised P&L.
+- Optional staged allocation planner with stock/sector caps and a cash reserve, driven only by an explicit capital snapshot.
+- Outside-watchlist opportunity scan from imported and reviewed company-research inputs.
+- News catalyst event-study returns over subsequent trading sessions.
+- IPO evidence intake template and sector valuation-framework reference.
 
 ## Quick start
 
@@ -50,66 +30,89 @@ Python 3.11+ is recommended.
 
 ```bash
 python -m venv .venv
-# Windows: .venv\Scripts\activate
+# Windows: .venv\\Scripts\\activate
 # macOS/Linux: source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e .[dev]
 pytest
 ```
 
-### Available CLI commands
+## Commands
 
-Validate and atomically import a financial observation CSV:
+### Download official NSE EOD equity data
+
+```bash
+ies fetch-nse-eod --date 2026-11-12 --db data/research.db
+```
+
+The command downloads the current CM-UDiFF Common Bhavcopy Final ZIP, validates the archive/date/OHLCV rows, writes a normalized CSV under `data/market/`, and stores rows in SQLite. Summarise the latest stored session with `ies market-scan`. See [NSE data pipeline](docs/nse_data_pipeline.md).
+
+### Company and sector scans
+
+```bash
+ies company-scan ICICIBANK
+ies sector-scan --sector banking
+```
+
+These commands analyse imported, reviewed research inputs. They do not fetch or invent company financials on their own.
+
+### Generate the Wealth Scan decision register
+
+Populate `data/templates/research_inputs.csv` with reviewed data, source references and scores (score fields are 0–100; completeness and valuation confidence are 0–1), then run:
+
+```bash
+ies wealth-scan
+# Optional, when a current portfolio/cash snapshot is available:
+ies wealth-scan --capital-snapshot data/templates/capital_snapshot.csv
+# Discover actionable BUY/ACCUMULATE candidates outside the 64-stock universe:
+ies opportunity-scan
+```
+
+Outputs are written to `reports/wealth-scan/decision_register.csv` and `wealth_scan.md`. The configured 64-stock universe always receives an explicit decision. A stock without sufficient data is marked **ASSESS**, not assigned a guessed BUY or WAIT.
+
+### Import portfolio transactions
+
+```bash
+ies import-portfolio data/templates/your_transactions.csv --db data/research.db
+ies portfolio-status --db data/research.db
+```
+
+See [portfolio and event tracking](docs/portfolio_and_event_tracking.md).
+
+### Track news outcomes
+
+Enter sourced events in `data/templates/news_events.csv`, then run:
+
+```bash
+ies event-study
+```
+
+This reports T+1/T+3/T+5 stock returns. It is descriptive and does not claim causation.
+
+### Existing financial-data commands
 
 ```bash
 ies import-financials data/templates/your_observations.csv --db data/research.db
-```
-
-Check how many observations are stored:
-
-```bash
 ies db-status --db data/research.db
+ies bank-ratios --symbol ICICIBANK --period-start 2026-07-01 --period-end 2026-09-30 --basis standalone --source-name "ICICI Q2 results" --db data/research.db
 ```
 
-Calculate bank ratios for a single statement and named source:
+## Decision framework
 
-```bash
-ies bank-ratios --symbol ICICIBANK \
-  --period-start 2026-07-01 --period-end 2026-09-30 \
-  --basis standalone --source-name "ICICI Q2 results" --db data/research.db
-```
+BUY requires at least 85% data completeness, data no older than 120 days, valuation confidence of at least 65%, minimum quality/growth/balance-sheet/governance scores, sourced base/bear/bull valuation inputs and at least 15% margin of safety to base fair value. ACCUMULATE requires at least 8% margin of safety with the same quality gates. A broken thesis or material risk overrides an attractive valuation. Details: [decision framework](docs/decision_framework.md).
 
-See [financial ingestion](docs/financial_ingestion.md) for the CSV schema and import rules.
+## Scheduled workflow
 
-The valuation module implements a simplified justified price-to-book formula for banks; it is a scenario tool, not a full multi-stage valuation or recommendation engine.
+GitHub Actions runs the NSE EOD fetch on weekdays at 18:15 India time and retains the normalized data artifact for 90 days. Run it manually from Actions to request a historical trading date. Artifacts are not a hosted persistent database.
 
-## Research workflows (planned)
+## What is not connected yet
 
-- `COMPANY SCAN --symbol ICICIBANK`
-- `SECTOR SCAN --sector BANKING`
-- `STOCK DISCOVERY`
-- `PORTFOLIO REVIEW`
-- `RESEARCH REVIEW`
-- `FULL UNIVERSE SCAN`
+- INDmoney private account sync is not configured. Import a user-exported CSV; do not put broker credentials in Git.
+- Automated cross-company financial filing PDF/XBRL extraction is not yet implemented.
+- Automated news ingestion, AI model endpoints, corporate-action-adjusted historical prices, BSE feeds, benchmark-relative event studies and hosted persistent storage remain outstanding.
+- No recommendation is produced from empty template data. Research fields and fair values must be verified and sourced.
 
-These remain target workflows, not currently executable CLI commands.
+See [implementation status](docs/implementation_status.md) for integration boundaries.
 
-## Safety and research integrity
+## Research integrity
 
-1. Never invent missing prices, financial periods, ratios, holdings, analyst targets or source references.
-2. Keep reported facts, derived calculations, estimates and analyst assumptions visibly separate.
-3. Prefer audited annual reports, exchange filings, regulatory notices and official investor presentations.
-4. Record whether each price is live, delayed, end-of-day or historical. Reject stale or inconsistent timestamps for live claims.
-5. Retain raw source data and transformation metadata where licensing permits.
-6. Do not silently adjust historical prices; check corporate actions.
-7. Do not store credentials, broker tokens, personal account identifiers or private financial exports in Git.
-8. AI model output is an aid to research, not a source of truth. Validate extracted figures against primary disclosures.
-9. Long-term and swing-trading analyses must remain separate.
-10. Every final decision must state uncertainty, risks, valuation assumptions and thesis-invalidation conditions.
-
-## Configuration
-
-Copy `.env.example` to `.env` locally and fill only the secrets required by integrations you have separately authorised. Never commit `.env`. The example YAML files contain non-secret settings only.
-
-## Disclaimer
-
-For research and educational purposes only. Nothing in this repository is an offer, solicitation or personalised investment advice. Verify inputs and consult an appropriately registered investment professional before making investment decisions.
+This is research software, not a brokerage execution system or a personalised investment advisory service. It does not place orders. Verify every input and review risk, concentration, liquidity, taxes and suitability before investing.

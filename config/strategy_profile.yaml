@@ -1,0 +1,40 @@
+profile:
+  risk_appetite: moderate_to_high
+  investment_horizon_years: [7, 10]
+  objective: long_term_wealth_creation
+  mode: long_term_only_unless_swing_explicitly_requested
+  style: quality_growth_at_reasonable_valuations
+  staged_entries: true
+  allow_valuation_premiums_for_durable_growth: true
+  never_force_buy_recommendations: true
+  never_default_every_stock_to_wait: true
+
+recommendation_rules:
+  minimum_data_completeness: 0.85
+  maximum_data_age_days: 120
+  minimum_valuation_confidence: 0.65
+  minimum_average_quality_score: 65
+  minimum_quality_score: 65
+  minimum_growth_score: 55
+  minimum_balance_sheet_score: 55
+  minimum_governance_score: 65
+  buy_margin_of_safety: 0.15
+  accumulate_margin_of_safety: 0.08
+  stretched_valuation_review: 0.30
+  actions:
+    BUY: "Start a position in planned tranches when all quality, data and valuation gates pass."
+    ACCUMULATE: "Build a high-quality position gradually when at least 8% margin of safety is present."
+    HOLD: "Retain an existing position while the thesis remains intact."
+    WAIT: "Do not initiate yet; price or risk conditions are not attractive enough."
+    ASSESS: "Required inputs are missing, stale, inconsistent or low confidence."
+    OBSERVE: "Potential candidate not yet ready for capital; discovery classification only."
+    REDUCE: "Review concentration and thesis risk; trim only with documented rationale."
+    EXIT: "Investment thesis is broken; review exit action and position exposure."
+    AVOID: "Fails quality or thesis requirements for new capital."
+
+portfolio_controls:
+  maximum_single_stock_weight_pct: 10
+  maximum_sector_weight_pct: 30
+  minimum_cash_reserve_pct: 5
+  position_size_requires_portfolio_review: true
+  no_leverage_or_margin_recommendations: true

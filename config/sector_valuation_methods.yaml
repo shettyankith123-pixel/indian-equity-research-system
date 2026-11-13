@@ -1,0 +1,45 @@
+sector_frameworks:
+  banks:
+    primary_valuation: "justified_PB_and_normalised_ROE"
+    key_metrics: [NIM, ROA, ROE, GNPA, NNPA, provision_coverage, CET1, deposit_growth, CASA, credit_growth]
+    cautions: [credit_cost_cycle, deposit_franchise, unsecured_exposure, regulatory_capital]
+  financial_services:
+    primary_valuation: "P_E_or_P_B_by_business_model"
+    key_metrics: [AUM_growth, credit_cost, ROA, ROE, capital_adequacy, asset_quality]
+    cautions: [funding_cost, leverage, asset_quality, regulation]
+  information_technology:
+    primary_valuation: "normalised_P_E_and_FCF_yield"
+    key_metrics: [revenue_growth, EBIT_margin, deal_wins, attrition, FCF_conversion, client_concentration]
+    cautions: [currency, client_spending, AI_disruption, utilisation]
+  consumer_FMCG:
+    primary_valuation: "normalised_P_E_and_cash_flow_yield"
+    key_metrics: [volume_growth, realisations, gross_margin, market_share, ROCE, FCF]
+    cautions: [input_costs, rural_demand, valuation, distribution_strength]
+  industrials_capital_goods:
+    primary_valuation: "normalised_P_E_EV_EBITDA_and_order_book_quality"
+    key_metrics: [order_inflow, order_book, execution, working_capital, ROCE, debt]
+    cautions: [project_delays, customer_concentration, cycle_peaks, cash_conversion]
+  auto:
+    primary_valuation: "cycle_normalised_P_E_and_EV_EBITDA"
+    key_metrics: [volume_growth, market_share, margins, product_mix, capex, EV_transition]
+    cautions: [commodity_costs, demand_cycle, regulation, technology_transition]
+  pharma_healthcare:
+    primary_valuation: "normalised_P_E_and_DCF"
+    key_metrics: [product_pipeline, regulatory_compliance, margins, R_and_D, capacity_utilisation]
+    cautions: [USFDA_observations, patent_cliffs, price_controls, product_concentration]
+  metals_mining_energy:
+    primary_valuation: "mid_cycle_EV_EBITDA_and_asset_NAV"
+    key_metrics: [realisation, cost_curve, reserves, leverage, capex, dividend_cover]
+    cautions: [commodity_prices, government_policy, environmental_liabilities, cyclicality]
+  utilities_power:
+    primary_valuation: "DCF_and_EV_EBITDA"
+    key_metrics: [regulated_returns, capacity_addition, PLF, receivables, debt, capex_pipeline]
+    cautions: [tariff_regulation, fuel_supply, project_execution, leverage]
+  chemicals:
+    primary_valuation: "cycle_normalised_P_E_and_EV_EBITDA"
+    key_metrics: [utilisation, spreads, export_mix, customer_qualification, ROCE, net_debt]
+    cautions: [China_capacity, input_spreads, environmental_compliance, cycle_normalisation]
+  diversified:
+    primary_valuation: "sum_of_parts_and_DCF"
+    key_metrics: [segment_growth, segment_margins, capital_allocation, net_debt, governance]
+    cautions: [conglomerate_discount, related_party_risk, capital_allocation]

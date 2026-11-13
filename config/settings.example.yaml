@@ -1,0 +1,69 @@
+system:
+  name: "Indian Equity Research System"
+  default_horizon_years: 7
+  maximum_horizon_years: 10
+  default_investment_mode: "long_term"
+  swing_mode_requires_explicit_request: true
+  currency: "INR"
+  timezone: "Asia/Kolkata"
+
+universe:
+  primary_exchange: "NSE"
+  include_sme_by_default: false
+  include_ipo_research: true
+  include_outside_watchlist_opportunities: true
+  watchlist_file: "config/watchlists/indian_watchlist.yaml"
+
+research:
+  depth: "deep"
+  require_primary_sources_for_material_claims: true
+  require_publication_date: true
+  require_financial_period: true
+  report_decisions:
+    - "BUY"
+    - "ACCUMULATE"
+    - "WAIT"
+    - "OBSERVE"
+    - "AVOID"
+  valuation:
+    require_bear_base_bull_cases: true
+    disclose_all_material_assumptions: true
+  risk:
+    require_thesis_invalidation_conditions: true
+
+data_quality:
+  reject_unknown_or_future_timestamps_for_eod_data: true
+  label_live_delayed_eod_and_historical_prices: true
+  verify_corporate_actions_before_historical_return_calculations: true
+  never_fill_missing_financials_with_estimates_without_label: true
+  store_source_and_retrieval_metadata: true
+
+providers:
+  nse:
+    enabled: false
+    note: "Connect through an authorised provider/connector; not wired in this starter."
+  indmoney:
+    enabled: false
+    note: "Connect through an authorised provider/connector; not wired in this starter."
+  company_filings:
+    enabled: false
+    preferred_sources:
+      - "Company investor relations"
+      - "NSE corporate announcements"
+      - "BSE corporate announcements"
+      - "RBI"
+      - "SEBI"
+  language_models:
+    enabled: false
+    primary: "ChatGPT orchestration"
+    optional_models:
+      - "FinBERT"
+      - "FinGPT"
+      - "Qwen"
+    note: "No external model is deployed or connected yet."
+
+storage:
+  engine: "sqlite"
+  path: "data/research.db"
+  retain_raw_documents: false
+  note: "Review provider licences and terms before storing source documents or market data."

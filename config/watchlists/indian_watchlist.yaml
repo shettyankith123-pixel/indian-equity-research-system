@@ -1,0 +1,88 @@
+# Imported from the connected INDmoney watchlists during initial system setup.
+# Symbols are exchange identifiers, not recommendations.
+# Last confirmed list count: 64 instruments across four groups.
+
+watchlists:
+  - name: "Core longterm comp"
+    purpose: "Core long-term compounders and diversified large-cap exposure"
+    symbols:
+      - HCLTECH
+      - POLYCAB
+      - ULTRACEMCO
+      - PIDILITIND
+      - M&M
+      - MARUTI
+      - APOLLOHOSP
+      - SUNPHARMA
+      - MARICO
+      - HINDUNILVR
+      - ITC
+      - INFY
+      - TCS
+      - BAJFINANCE
+      - SBIN
+      - ICICIBANK
+      - LT
+      - NTPC
+      - POWERGRID
+      - RELIANCE
+
+  - name: "Growth opportunities"
+    purpose: "Growth-oriented companies for deeper research"
+    symbols:
+      - ASTRAL
+      - SUPREMEIND
+      - KEI
+      - HDFCAMC
+      - CAMS
+      - MANKIND
+      - MOTHERSON
+      - TVSMOTOR
+      - RADICO
+      - VBL
+      - OFSS
+      - COFORGE
+      - PERSISTENT
+      - SIEMENS
+      - ABB
+      - CUMMINSIND
+      - CGPOWER
+      - HAL
+      - BEL
+
+  - name: "Cyclical opportunity"
+    purpose: "Cyclical, commodity, industrial and energy exposures"
+    symbols:
+      - DALBHARAT
+      - SRF
+      - NAVINFLUOR
+      - FLUOROCHEM
+      - DEEPAKNTR
+      - PIIND
+      - HINDALCO
+      - JSWSTEEL
+      - TATASTEEL
+      - COALINDIA
+      - HINDZINC
+      - NMDC
+      - BHEL
+      - TATAPOWER
+      - GAIL
+      - ONGC
+
+  - name: "Special Monitoring"
+    purpose: "Special situations and additional monitoring"
+    symbols:
+      - CDSL
+      - ANANDRATHI
+      - BSE
+      - MCX
+      - LALPATHLAB
+      - UNITDSPR
+      - UBL
+      - BRITANNIA
+      - ZENSARTECH
+
+metadata:
+  expected_total_symbols: 64
+  note: "Refresh this file from INDmoney periodically; do not assume this static snapshot is current."

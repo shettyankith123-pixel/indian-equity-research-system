@@ -1,0 +1,28 @@
+name: NSE Integrated Financials Smoke Test
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  xbrl-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install financial filing parser
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[financials]"
+      - name: Fetch and parse one official ICICI Bank Q2 FY27 filing
+        run: python scripts/test_nse_integrated_filing.py
+      - name: Upload parsed filing evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: nse-financials-smoke
+          path: financials-smoke.json
+          if-no-files-found: error
+          retention-days: 30

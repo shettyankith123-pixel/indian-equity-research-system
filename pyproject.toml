@@ -13,6 +13,7 @@ dependencies = []
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.10"]
 market = []
+financials = ["nse-xbrl>=0.1.1"]
 
 [project.scripts]
 ies = "indian_equity_research.cli:main"

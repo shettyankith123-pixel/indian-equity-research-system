@@ -17,6 +17,9 @@ dev = [
   "mypy>=1.10",
 ]
 
+[project.scripts]
+ies = "indian_equity_research.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

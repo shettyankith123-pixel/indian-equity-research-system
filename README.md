@@ -13,7 +13,9 @@ A private, evidence-led research platform for Indian equities. The system is des
 
 ## Current status
 
-This repository is the **initial engineering foundation**. It includes the research rules, watchlist, starter valuation code, tests and configuration templates. Live NSE/INDmoney ingestion, company-filing ingestion, persistent database, model endpoints and scheduled production runs are **not yet implemented**. They must be integrated and tested before the system is described as automated or production-ready.
+The repository contains research rules, the imported watchlist, financial data models, bank-ratio calculations, CSV ingestion, SQLite persistence, a CLI and tests. The data pipeline is usable for validated financial statement CSV imports.
+
+**Not yet implemented:** automated NSE/INDmoney provider connections inside GitHub Actions, official filing downloads and parsing, persistent hosted database, external AI model endpoints, scheduled research runs and automated report generation. Connected chat integrations are available in ChatGPT, but are not automatically callable from this GitHub repository.
 
 ## Repository structure
 
@@ -21,15 +23,22 @@ This repository is the **initial engineering foundation**. It includes the resea
 config/
   settings.example.yaml
   watchlists/indian_watchlist.yaml
+data/
+  templates/financial_observations.csv
 docs/
   architecture.md
   data_quality.md
+  financial_data_model.md
+  financial_ingestion.md
   research_methodology.md
 src/indian_equity_research/
-  __init__.py
-  valuation/bank_valuation.py
+  analytics/
+  ingestion/
+  models/
+  storage/
+  valuation/
+  cli.py
 tests/
-  test_bank_valuation.py
 .github/workflows/tests.yml
 .env.example
 pyproject.toml
@@ -47,9 +56,33 @@ pip install -e ".[dev]"
 pytest
 ```
 
-The valuation module is intentionally small and dependency-light. It implements a simplified justified price-to-book formula for banks; it is a scenario tool, not a full discounted cash-flow model or a recommendation engine.
+### Available CLI commands
 
-## Core research commands (planned interface)
+Validate and atomically import a financial observation CSV:
+
+```bash
+ies import-financials data/templates/your_observations.csv --db data/research.db
+```
+
+Check how many observations are stored:
+
+```bash
+ies db-status --db data/research.db
+```
+
+Calculate bank ratios for a single statement and named source:
+
+```bash
+ies bank-ratios --symbol ICICIBANK \
+  --period-start 2026-07-01 --period-end 2026-09-30 \
+  --basis standalone --source-name "ICICI Q2 results" --db data/research.db
+```
+
+See [financial ingestion](docs/financial_ingestion.md) for the CSV schema and import rules.
+
+The valuation module implements a simplified justified price-to-book formula for banks; it is a scenario tool, not a full multi-stage valuation or recommendation engine.
+
+## Research workflows (planned)
 
 - `COMPANY SCAN --symbol ICICIBANK`
 - `SECTOR SCAN --sector BANKING`
@@ -58,7 +91,7 @@ The valuation module is intentionally small and dependency-light. It implements 
 - `RESEARCH REVIEW`
 - `FULL UNIVERSE SCAN`
 
-These are target workflows, not currently executable CLI commands.
+These remain target workflows, not currently executable CLI commands.
 
 ## Safety and research integrity
 
@@ -75,7 +108,7 @@ These are target workflows, not currently executable CLI commands.
 
 ## Configuration
 
-Copy `.env.example` to `.env` and fill only the secrets required by integrations you have separately authorised. Never commit `.env`. The example YAML files contain non-secret settings only.
+Copy `.env.example` to `.env` locally and fill only the secrets required by integrations you have separately authorised. Never commit `.env`. The example YAML files contain non-secret settings only.
 
 ## Disclaimer
 

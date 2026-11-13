@@ -43,7 +43,7 @@ jobs:
         run: |
           ARGS=()
           if [ -n "$SYMBOLS" ]; then ARGS+=(--symbols "$SYMBOLS"); fi
-          python scripts/ingest_nse_integrated_filings.py             --quarter-count "$QUARTER_COUNT"             --annual-count "$ANNUAL_COUNT"             --delay-seconds 0.35             "${ARGS[@]}"
+          python scripts/ingest_nse_integrated_filings.py             --quarter-count "$QUARTER_COUNT"             --annual-count "$ANNUAL_COUNT"             --delay-seconds 0.35             --run-id "github-${GITHUB_RUN_ID}"             "${ARGS[@]}"
       - name: Upload financial database, source observations and coverage
         uses: actions/upload-artifact@v4
         with:

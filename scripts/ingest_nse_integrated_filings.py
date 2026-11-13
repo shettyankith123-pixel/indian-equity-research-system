@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from nse_xbrl import NSEClient, parse_xbrl
-from indian_equity_research.ingestion.xbrl_contexts import parse_iso_or_nse, choose_duration_context
+from indian_equity_research.ingestion.xbrl_contexts import parse_iso_or_nse, choose_duration_context, create_run_directory
 
 from indian_equity_research.models.financials import (
     FinancialObservation,
@@ -220,7 +220,8 @@ def select_filing(rows: list[dict[str, Any]], target_end: date, basis: str) -> d
 def main() -> int:
     parser = argparse.ArgumentParser(description="Ingest official NSE Integrated Filing XBRL for the 64-stock universe.")
     parser.add_argument("--universe", type=Path, default=Path("data/universe/indian_watchlist_companies.csv"))
-    parser.add_argument("--output-dir", type=Path, default=Path("data/financials"))
+    parser.add_argument("--output-dir", type=Path, default=Path("data/financials"), help="Base folder; every run gets a unique subfolder.")
+    parser.add_argument("--run-id", default=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ"), help="Unique output folder name; reusing an existing ID is rejected.")
     parser.add_argument("--symbols", default="", help="Optional comma-separated symbol subset for validation.")
     parser.add_argument("--quarter-end", default="2026-09-30")
     parser.add_argument("--annual-end", default=date.today().isoformat())
@@ -241,11 +242,8 @@ def main() -> int:
 
     quarter_end = date.fromisoformat(args.quarter_end)
     annual_end = date.fromisoformat(args.annual_end)
-    output_dir = args.output_dir
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = create_run_directory(args.output_dir, args.run_id)
     db_path = output_dir / "financials.sqlite"
-    if db_path.exists():
-        db_path.unlink()
     repo = FinancialRepository(db_path)
 
     client = NSEClient()

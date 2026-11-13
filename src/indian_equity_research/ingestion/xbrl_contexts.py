@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any
 
 
@@ -115,3 +116,12 @@ def choose_duration_context(
             f"available_fact_tags={fact_tags}; fact_context_ids={context_ids}"
         )
     return context_id, start, end
+
+
+def create_run_directory(base_dir: Path, run_id: str) -> Path:
+    """Create an isolated output directory; never overwrite a prior import run."""
+    if not run_id or not all(char.isalnum() or char in "._-" for char in run_id):
+        raise ValueError("run_id may contain only letters, numbers, dots, underscores and hyphens")
+    run_dir = base_dir / "runs" / run_id
+    run_dir.mkdir(parents=True, exist_ok=False)
+    return run_dir

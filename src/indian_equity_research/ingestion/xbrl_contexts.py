@@ -126,3 +126,19 @@ def create_run_directory(base_dir: Path, run_id: str) -> Path:
     run_dir = base_dir / "runs" / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
     return run_dir
+
+
+def period_kind_for_target(
+    target_end: date,
+    default_kind: str,
+    transition_period_start: str = "",
+    transition_period_end: str = "",
+) -> str:
+    """Return a special issuer-period kind when a target end belongs to a disclosed transition year."""
+    if default_kind != "year" or not transition_period_start or not transition_period_end:
+        return default_kind
+    start = date.fromisoformat(transition_period_start)
+    end = date.fromisoformat(transition_period_end)
+    if start >= end:
+        raise ValueError("transition_period_start must be before transition_period_end")
+    return "transition_period" if target_end == end else default_kind

@@ -1,65 +1,65 @@
-symbol,issuer_name,ind_key,sector,fiscal_year_end
-HCLTECH,HCL Technologies Ltd,INDS00894,IT Services,03-31
-POLYCAB,Polycab India Ltd,INDS03612,Electricals,03-31
-ULTRACEMCO,UltraTech Cement Ltd,INDS03094,Cement,03-31
-PIDILITIND,Pidilite Industries Ltd,INDS00200,Specialty Chemicals,03-31
-M&M,Mahindra & Mahindra Ltd,INDS01150,Automobiles,03-31
-MARUTI,Maruti Suzuki India Ltd,INDS02732,Automobiles,03-31
-APOLLOHOSP,Apollo Hospitals Enterprise Ltd,INDS01224,Healthcare,03-31
-SUNPHARMA,Sun Pharmaceutical Industries Ltd,INDS00814,Pharmaceuticals,03-31
-MARICO,Marico Ltd,INDS02743,FMCG,03-31
-HINDUNILVR,Hindustan Unilever Ltd,INDS01216,FMCG,03-31
-ITC,ITC Ltd,INDS00972,FMCG,03-31
-INFY,Infosys Ltd,INDS00577,IT Services,03-31
-TCS,Tata Consultancy Services Ltd,INDS01489,IT Services,03-31
-BAJFINANCE,Bajaj Finance Ltd,INDS00862,Financial Services,03-31
-SBIN,State Bank of India,INDS01086,Banking,03-31
-ICICIBANK,ICICI Bank Limited,INDS01995,Banking,03-31
-LT,Larsen & Toubro Ltd,INDS00435,Capital Goods,03-31
-NTPC,NTPC Ltd,INDS02266,Power Utilities,03-31
-POWERGRID,Power Grid Corporation of India Ltd,INDS00333,Power Utilities,03-31
-RELIANCE,Reliance Industries Ltd,INDS01052,Diversified,03-31
-ASTRAL,Astral Ltd,INDS03135,Building Materials,03-31
-SUPREMEIND,Supreme Industries Ltd,INDS00953,Building Materials,03-31
-KEI,KEI Industries Ltd,INDS01632,Electricals,03-31
-HDFCAMC,HDFC Asset Management Company Ltd,INDS01697,Financial Services,03-31
-CAMS,Computer Age Management Services Ltd,INDS03825,Financial Services,03-31
-MANKIND,Mankind Pharma Ltd,INDS25531,Pharmaceuticals,03-31
-MOTHERSON,Samvardhana Motherson International Ltd,INDS01572,Auto Components,03-31
-TVSMOTOR,TVS Motor Company Ltd,INDS02264,Automobiles,03-31
-RADICO,Radico Khaitan Ltd,INDS00736,Consumer Beverages,03-31
-VBL,Varun Beverages Ltd,INDS03092,Consumer Beverages,12-31
-OFSS,Oracle Financial Services Software Ltd,INDS02335,IT Services,03-31
-COFORGE,Coforge Ltd,INDS03131,IT Services,03-31
-PERSISTENT,Persistent Systems Ltd,INDS02755,IT Services,03-31
-SIEMENS,Siemens Ltd,INDS00977,Capital Goods,03-31
-ABB,ABB India Ltd,INDS00970,Capital Goods,12-31
-CUMMINSIND,Cummins India Ltd,INDS01051,Capital Goods,03-31
-CGPOWER,CG Power & Industrial Solutions Ltd,INDS00428,Electricals,03-31
-HAL,Hindustan Aeronautics Ltd,INDS00792,Aerospace & Defence,03-31
-BEL,Bharat Electronics Ltd,INDS02423,Aerospace & Defence,03-31
-DALBHARAT,Dalmia Bharat Ltd,INDS03486,Cement,03-31
-SRF,SRF Ltd,INDS01174,Specialty Chemicals,03-31
-NAVINFLUOR,Navin Fluorine International Ltd,INDS03698,Specialty Chemicals,03-31
-FLUOROCHEM,Gujarat Fluorochemicals Ltd,INDS02640,Specialty Chemicals,03-31
-DEEPAKNTR,Deepak Nitrite Ltd,INDS01782,Specialty Chemicals,03-31
-PIIND,P I Industries Ltd,INDS00079,Agrochemicals,03-31
-HINDALCO,Hindalco Industries Ltd,INDS01006,Metals,03-31
-JSWSTEEL,JSW Steel Ltd,INDS00873,Metals,03-31
-TATASTEEL,Tata Steel Ltd,INDS00413,Metals,03-31
-COALINDIA,Coal India Ltd,INDS02884,Mining,03-31
-HINDZINC,Hindustan Zinc Ltd,INDS00021,Metals,03-31
-NMDC,NMDC Ltd,INDS01336,Mining,03-31
-BHEL,Bharat Heavy Electricals Ltd,INDS00188,Capital Goods,03-31
-TATAPOWER,Tata Power Company Ltd,INDS00395,Power Utilities,03-31
-GAIL,GAIL (India) Ltd,INDS01914,Gas Utilities,03-31
-ONGC,Oil & Natural Gas Corporation Ltd,INDS01834,Oil & Gas,03-31
-CDSL,Central Depository Services (India) Ltd,INDS03470,Financial Services,03-31
-ANANDRATHI,Anand Rathi Wealth Ltd,INDS01595,Financial Services,03-31
-BSE,BSE Ltd,INDS03200,Financial Services,03-31
-MCX,Multi Commodity Exchange of India Limited,INDS01940,Financial Services,03-31
-LALPATHLAB,Dr Lal PathLabs Ltd,INDS03819,Healthcare,03-31
-UNITDSPR,United Spirits Ltd,INDS02969,Consumer Beverages,03-31
-UBL,United Breweries Ltd,INDS01935,Consumer Beverages,03-31
-BRITANNIA,Britannia Industries Ltd,INDS00170,FMCG,03-31
-ZENSARTECH,Zensar Technologies Ltd,INDS00042,IT Services,03-31
+symbol,issuer_name,ind_key,sector,fiscal_year_end,transition_period_start,transition_period_end
+HCLTECH,HCL Technologies Ltd,INDS00894,IT Services,03-31,,
+POLYCAB,Polycab India Ltd,INDS03612,Electricals,03-31,,
+ULTRACEMCO,UltraTech Cement Ltd,INDS03094,Cement,03-31,,
+PIDILITIND,Pidilite Industries Ltd,INDS00200,Specialty Chemicals,03-31,,
+M&M,Mahindra & Mahindra Ltd,INDS01150,Automobiles,03-31,,
+MARUTI,Maruti Suzuki India Ltd,INDS02732,Automobiles,03-31,,
+APOLLOHOSP,Apollo Hospitals Enterprise Ltd,INDS01224,Healthcare,03-31,,
+SUNPHARMA,Sun Pharmaceutical Industries Ltd,INDS00814,Pharmaceuticals,03-31,,
+MARICO,Marico Ltd,INDS02743,FMCG,03-31,,
+HINDUNILVR,Hindustan Unilever Ltd,INDS01216,FMCG,03-31,,
+ITC,ITC Ltd,INDS00972,FMCG,03-31,,
+INFY,Infosys Ltd,INDS00577,IT Services,03-31,,
+TCS,Tata Consultancy Services Ltd,INDS01489,IT Services,03-31,,
+BAJFINANCE,Bajaj Finance Ltd,INDS00862,Financial Services,03-31,,
+SBIN,State Bank of India,INDS01086,Banking,03-31,,
+ICICIBANK,ICICI Bank Limited,INDS01995,Banking,03-31,,
+LT,Larsen & Toubro Ltd,INDS00435,Capital Goods,03-31,,
+NTPC,NTPC Ltd,INDS02266,Power Utilities,03-31,,
+POWERGRID,Power Grid Corporation of India Ltd,INDS00333,Power Utilities,03-31,,
+RELIANCE,Reliance Industries Ltd,INDS01052,Diversified,03-31,,
+ASTRAL,Astral Ltd,INDS03135,Building Materials,03-31,,
+SUPREMEIND,Supreme Industries Ltd,INDS00953,Building Materials,03-31,,
+KEI,KEI Industries Ltd,INDS01632,Electricals,03-31,,
+HDFCAMC,HDFC Asset Management Company Ltd,INDS01697,Financial Services,03-31,,
+CAMS,Computer Age Management Services Ltd,INDS03825,Financial Services,03-31,,
+MANKIND,Mankind Pharma Ltd,INDS25531,Pharmaceuticals,03-31,,
+MOTHERSON,Samvardhana Motherson International Ltd,INDS01572,Auto Components,03-31,,
+TVSMOTOR,TVS Motor Company Ltd,INDS02264,Automobiles,03-31,,
+RADICO,Radico Khaitan Ltd,INDS00736,Consumer Beverages,03-31,,
+VBL,Varun Beverages Ltd,INDS03092,Consumer Beverages,12-31,,
+OFSS,Oracle Financial Services Software Ltd,INDS02335,IT Services,03-31,,
+COFORGE,Coforge Ltd,INDS03131,IT Services,03-31,,
+PERSISTENT,Persistent Systems Ltd,INDS02755,IT Services,03-31,,
+SIEMENS,Siemens Ltd,INDS00977,Capital Goods,03-31,2024-10-01,2026-03-31
+ABB,ABB India Ltd,INDS00970,Capital Goods,12-31,,
+CUMMINSIND,Cummins India Ltd,INDS01051,Capital Goods,03-31,,
+CGPOWER,CG Power & Industrial Solutions Ltd,INDS00428,Electricals,03-31,,
+HAL,Hindustan Aeronautics Ltd,INDS00792,Aerospace & Defence,03-31,,
+BEL,Bharat Electronics Ltd,INDS02423,Aerospace & Defence,03-31,,
+DALBHARAT,Dalmia Bharat Ltd,INDS03486,Cement,03-31,,
+SRF,SRF Ltd,INDS01174,Specialty Chemicals,03-31,,
+NAVINFLUOR,Navin Fluorine International Ltd,INDS03698,Specialty Chemicals,03-31,,
+FLUOROCHEM,Gujarat Fluorochemicals Ltd,INDS02640,Specialty Chemicals,03-31,,
+DEEPAKNTR,Deepak Nitrite Ltd,INDS01782,Specialty Chemicals,03-31,,
+PIIND,P I Industries Ltd,INDS00079,Agrochemicals,03-31,,
+HINDALCO,Hindalco Industries Ltd,INDS01006,Metals,03-31,,
+JSWSTEEL,JSW Steel Ltd,INDS00873,Metals,03-31,,
+TATASTEEL,Tata Steel Ltd,INDS00413,Metals,03-31,,
+COALINDIA,Coal India Ltd,INDS02884,Mining,03-31,,
+HINDZINC,Hindustan Zinc Ltd,INDS00021,Metals,03-31,,
+NMDC,NMDC Ltd,INDS01336,Mining,03-31,,
+BHEL,Bharat Heavy Electricals Ltd,INDS00188,Capital Goods,03-31,,
+TATAPOWER,Tata Power Company Ltd,INDS00395,Power Utilities,03-31,,
+GAIL,GAIL (India) Ltd,INDS01914,Gas Utilities,03-31,,
+ONGC,Oil & Natural Gas Corporation Ltd,INDS01834,Oil & Gas,03-31,,
+CDSL,Central Depository Services (India) Ltd,INDS03470,Financial Services,03-31,,
+ANANDRATHI,Anand Rathi Wealth Ltd,INDS01595,Financial Services,03-31,,
+BSE,BSE Ltd,INDS03200,Financial Services,03-31,,
+MCX,Multi Commodity Exchange of India Limited,INDS01940,Financial Services,03-31,,
+LALPATHLAB,Dr Lal PathLabs Ltd,INDS03819,Healthcare,03-31,,
+UNITDSPR,United Spirits Ltd,INDS02969,Consumer Beverages,03-31,,
+UBL,United Breweries Ltd,INDS01935,Consumer Beverages,03-31,,
+BRITANNIA,Britannia Industries Ltd,INDS00170,FMCG,03-31,,
+ZENSARTECH,Zensar Technologies Ltd,INDS00042,IT Services,03-31,,

@@ -84,3 +84,27 @@ def test_eighteen_month_transition_period_is_selected_only_as_transition():
     assert context_id == "EighteenMonthContext"
     assert start == date(2024, 10, 1)
     assert end == date(2026, 3, 31)
+
+
+
+def test_special_transition_period_is_resolved_from_issuer_metadata():
+    from indian_equity_research.ingestion.xbrl_contexts import period_kind_for_target
+
+    assert period_kind_for_target(
+        date(2026, 3, 31),
+        "year",
+        "2024-10-01",
+        "2026-03-31",
+    ) == "transition_period"
+    assert period_kind_for_target(
+        date(2027, 3, 31),
+        "year",
+        "2024-10-01",
+        "2026-03-31",
+    ) == "year"
+    assert period_kind_for_target(
+        date(2026, 3, 31),
+        "quarter",
+        "2024-10-01",
+        "2026-03-31",
+    ) == "quarter"

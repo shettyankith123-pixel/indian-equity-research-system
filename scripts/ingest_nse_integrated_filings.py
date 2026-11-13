@@ -339,6 +339,16 @@ def main() -> int:
                     ("annual", annual_dates, "year"),
                 ):
                     for target in period_dates:
+                        target_period_kind = period_kind_for_target(
+                            target,
+                            period_kind,
+                            company.get("transition_period_start", ""),
+                            company.get("transition_period_end", ""),
+                        )
+                        if target_period_kind == "transition_period":
+                            stored_label = "transition_period"
+                        else:
+                            stored_label = label
                         filing = select_filing(rows, target, basis)
                         if filing is None:
                             continue
@@ -346,7 +356,6 @@ def main() -> int:
                         if not xbrl_url:
                             row_coverage["errors"].append(f"{label}/{basis}/{target}: no XBRL URL")
                             continue
-                        stored_label = label
                         try:
                             if xbrl_url not in xbrl_cache:
                                 xml_text = None
@@ -366,10 +375,10 @@ def main() -> int:
                                 xbrl_cache[xbrl_url] = xml_text
                             try:
                                 observations, summary = extract_observations(
-                                    symbol, filing, xbrl_cache[xbrl_url], target, period_kind, retrieved_at
+                                    symbol, filing, xbrl_cache[xbrl_url], target, target_period_kind, retrieved_at
                                 )
                             except ValueError as primary_error:
-                                if label != "quarter" or "no quarter duration context" not in str(primary_error):
+                                if target_period_kind != "quarter" or "no quarter duration context" not in str(primary_error):
                                     raise
                                 # Some issuers report a half-year duration for the same
                                 # period end; store it as half-year, never as a quarter.
@@ -377,6 +386,10 @@ def main() -> int:
                                     symbol, filing, xbrl_cache[xbrl_url], target, "half_year", retrieved_at
                                 )
                                 stored_label = "half_year"
+                            if summary.get("period_kind") != target_period_kind and target_period_kind == "transition_period":
+                                raise ValueError(
+                                    "issuer fiscal transition period did not match the XBRL context"
+                                )
                             if summary.get("period_kind") == "transition_period":
                                 stored_label = "transition_period"
                             all_observations.extend(observations)

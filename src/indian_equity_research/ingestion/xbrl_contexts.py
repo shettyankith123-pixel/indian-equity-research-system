@@ -73,6 +73,7 @@ def choose_duration_context(
         "quarter": (70, 120, 91),
         "half_year": (150, 220, 182),
         "year": (300, 380, 365),
+        "transition_period": (450, 730, 548),
     }
     if period_kind not in ranges:
         raise ValueError(f"unsupported period_kind: {period_kind}")

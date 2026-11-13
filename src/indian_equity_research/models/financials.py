@@ -9,7 +9,7 @@ from typing import Literal
 import re
 
 ReportingBasis = Literal["standalone", "consolidated"]
-PeriodKind = Literal["quarter", "half_year", "year", "trailing_twelve_months"]
+PeriodKind = Literal["quarter", "half_year", "year", "transition_period", "trailing_twelve_months"]
 ObservationKind = Literal["reported", "calculated", "estimate"]
 SourceType = Literal["company_filing", "exchange_filing", "regulator", "provider", "other"]
 

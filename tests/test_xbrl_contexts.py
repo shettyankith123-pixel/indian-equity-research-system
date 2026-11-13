@@ -69,3 +69,18 @@ def test_duration_context_prefers_context_with_relevant_facts():
         contexts, date(2026, 9, 30), "quarter", facts, ("RevenueFromOperations",)
     )
     assert context_id == "OneReportable1D"
+
+
+def test_eighteen_month_transition_period_is_selected_only_as_transition():
+    contexts = {
+        "EighteenMonthContext": {"start": "2024-10-01", "end": "2026-03-31"},
+        "QuarterContext": {"start": "2026-01-01", "end": "2026-03-31"},
+    }
+    with pytest.raises(ValueError, match="no year duration context"):
+        choose_duration_context(contexts, date(2026, 3, 31), "year")
+    context_id, start, end = choose_duration_context(
+        contexts, date(2026, 3, 31), "transition_period"
+    )
+    assert context_id == "EighteenMonthContext"
+    assert start == date(2024, 10, 1)
+    assert end == date(2026, 3, 31)

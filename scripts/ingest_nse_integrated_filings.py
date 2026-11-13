@@ -20,6 +20,7 @@ from indian_equity_research.models.financials import (
     FinancialPeriod,
     SourceReference,
 )
+from indian_equity_research.ingestion.nse_filing_client import fetch_integrated_filing_listing
 from indian_equity_research.storage.repository import FinancialRepository
 
 SOURCE_NAME = "NSE Integrated Filing - Financials"
@@ -114,22 +115,45 @@ def extract_observations(
     preferred_tags = tuple(
         tag for aliases, _unit in METRIC_MAP.values() for tag in aliases
     )
-    context_id, start_date, end_date = choose_duration_context(
-        contexts, expected_end, period_kind, facts, preferred_tags
-    )
-    if period_kind == "quarter" and (end_date - start_date).days > 140:
-        raise ValueError(f"quarter context unexpectedly spans {(end_date-start_date).days} days")
-    if period_kind == "year" and (end_date - start_date).days < 300:
-        raise ValueError(f"annual context unexpectedly spans {(end_date-start_date).days} days")
+    stored_period_kind = period_kind
+    try:
+        context_id, start_date, end_date = choose_duration_context(
+            contexts, expected_end, period_kind, facts, preferred_tags
+        )
+    except ValueError as primary_error:
+        if period_kind != "year":
+            raise
+        try:
+            context_id, start_date, end_date = choose_duration_context(
+                contexts, expected_end, "transition_period", facts, preferred_tags
+            )
+            stored_period_kind = "transition_period"
+        except ValueError:
+            raise primary_error
+
+    span_days = (end_date - start_date).days + 1
+    if stored_period_kind == "quarter" and span_days > 140:
+        raise ValueError(f"quarter context unexpectedly spans {span_days} days")
+    if stored_period_kind == "year" and span_days < 300:
+        raise ValueError(f"annual context unexpectedly spans {span_days} days")
+    if stored_period_kind == "transition_period" and not 450 <= span_days <= 730:
+        raise ValueError(f"transition context unexpectedly spans {span_days} days")
 
     basis = row_basis(row)
     if not basis:
         raise ValueError("filing has no recognised standalone/consolidated basis")
-    annualisation = Decimal("4") if period_kind == "quarter" else (Decimal("2") if period_kind == "half_year" else Decimal("1"))
+    if stored_period_kind == "quarter":
+        annualisation = Decimal("4")
+    elif stored_period_kind == "half_year":
+        annualisation = Decimal("2")
+    elif stored_period_kind == "transition_period":
+        annualisation = Decimal("365") / Decimal(span_days)
+    else:
+        annualisation = Decimal("1")
     period = FinancialPeriod(
         start_date=start_date,
         end_date=end_date,
-        kind=period_kind,
+        kind=stored_period_kind,
         basis=basis,
         annualisation_factor=annualisation,
     )
@@ -198,7 +222,7 @@ def extract_observations(
     summary = {
         "symbol": symbol,
         "basis": basis,
-        "period_kind": period_kind,
+        "period_kind": stored_period_kind,
         "period_start": start_date.isoformat(),
         "period_end": end_date.isoformat(),
         "publication_date": publication_date.isoformat(),
@@ -266,12 +290,16 @@ def main() -> int:
             "quarter_filings": 0,
             "half_year_filings": 0,
             "annual_filings": 0,
+            "transition_period_filings": 0,
             "observations": 0,
             "status": "",
             "errors": [],
         }
         try:
-            listing = client.get_integrated_filings(symbol, issuer, page=1, size=args.page_size)
+            listing, listing_query = fetch_integrated_filing_listing(
+                client, symbol, issuer, page=1, size=args.page_size
+            )
+            row_coverage["listing_query"] = listing_query
             if not isinstance(listing, dict):
                 raise RuntimeError("NSE filing search returned no JSON")
             rows = listing.get("data") or []
@@ -279,6 +307,11 @@ def main() -> int:
                 raise RuntimeError("NSE filing response has an unexpected data structure")
             row_coverage["listing_ok"] = True
             row_coverage["listing_rows"] = len(rows)
+            if not rows:
+                row_coverage["errors"].append(
+                    "No NSE Integrated Filing records returned after issuer and symbol-only lookup."
+                )
+                failures.append(f"{symbol}: no NSE Integrated Filing records returned by either lookup.")
 
             xbrl_cache: dict[str, str] = {}
             for basis in sorted({row_basis(r) for r in rows if row_basis(r)}):
@@ -344,6 +377,8 @@ def main() -> int:
                                     symbol, filing, xbrl_cache[xbrl_url], target, "half_year", retrieved_at
                                 )
                                 stored_label = "half_year"
+                            if summary.get("period_kind") == "transition_period":
+                                stored_label = "transition_period"
                             all_observations.extend(observations)
                             filing_summaries.append(summary)
                             row_coverage["observations"] += len(observations)
@@ -361,8 +396,12 @@ def main() -> int:
 
             if (row_coverage["quarter_filings"] or row_coverage["half_year_filings"]) and row_coverage["annual_filings"]:
                 row_coverage["status"] = "quarter_or_half_year_and_annual_loaded"
-            elif row_coverage["quarter_filings"] or row_coverage["half_year_filings"] or row_coverage["annual_filings"]:
+            elif (row_coverage["quarter_filings"] or row_coverage["half_year_filings"]) and row_coverage["transition_period_filings"]:
+                row_coverage["status"] = "quarter_or_half_year_and_transition_period_loaded"
+            elif row_coverage["quarter_filings"] or row_coverage["half_year_filings"] or row_coverage["annual_filings"] or row_coverage["transition_period_filings"]:
                 row_coverage["status"] = "partial_period_coverage"
+            elif row_coverage.get("listing_query") == "no_rows":
+                row_coverage["status"] = "filings_not_found_for_target_periods"
             elif row_coverage["errors"]:
                 row_coverage["status"] = "filing_parse_error"
             else:
@@ -411,7 +450,7 @@ def main() -> int:
             })
 
     coverage_path = output_dir / "filing_coverage.csv"
-    coverage_fields = ["symbol", "issuer_name", "sector", "listing_ok", "listing_rows", "quarter_filings", "half_year_filings", "annual_filings", "observations", "status", "errors"]
+    coverage_fields = ["symbol", "issuer_name", "sector", "listing_ok", "listing_rows", "listing_query", "quarter_filings", "half_year_filings", "annual_filings", "transition_period_filings", "observations", "status", "errors"]
     with coverage_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=coverage_fields)
         writer.writeheader()
@@ -427,10 +466,11 @@ def main() -> int:
     summary = {
         "retrieved_at": retrieved_at.isoformat(),
         "universe_count": len(companies),
-        "company_count_with_any_filing": sum(1 for r in coverage if r["quarter_filings"] or r["half_year_filings"] or r["annual_filings"]),
+        "company_count_with_any_filing": sum(1 for r in coverage if r["quarter_filings"] or r["half_year_filings"] or r["annual_filings"] or r["transition_period_filings"]),
         "quarter_company_count": sum(1 for r in coverage if r["quarter_filings"]),
         "half_year_company_count": sum(1 for r in coverage if r["half_year_filings"]),
         "annual_company_count": sum(1 for r in coverage if r["annual_filings"]),
+        "transition_period_company_count": sum(1 for r in coverage if r["transition_period_filings"]),
         "observation_count": inserted,
         "sqlite_database": str(db_path),
         "csv_observations": str(csv_path),
@@ -440,7 +480,10 @@ def main() -> int:
     }
     (output_dir / "ingest_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary, indent=2))
-    if args.fail_on_missing and (summary["quarter_company_count"] + summary["half_year_company_count"] < len(companies) or summary["annual_company_count"] < len(companies)):
+    if args.fail_on_missing and (
+        summary["quarter_company_count"] + summary["half_year_company_count"] < len(companies)
+        or summary["annual_company_count"] + summary["transition_period_company_count"] < len(companies)
+    ):
         return 2
     if inserted == 0:
         return 3

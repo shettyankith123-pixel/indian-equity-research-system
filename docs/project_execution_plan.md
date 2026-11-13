@@ -314,3 +314,22 @@ The first full workflow dispatch proved the MCX observations were imported (24 r
 - Direct SQLite inspection verified 24 MCX observations and 23 Siemens NSE observations in that same database.
 - All 24 MCX observations retain the BSE source URL and reference BSE:534091:2026-11-03:Q2FY27:006dffdb.
 - The 23 Siemens observations are quarterly NSE facts; the 18-month annual transition period remains intentionally unimported because the available XBRL attachment exposes only a 12-month context.
+
+
+## 10. Cross-sector validation — PASSED — 14 November 2026
+
+Eight representative issuers across eight business sectors were imported on one recent quarterly/half-year and one annual period per reporting basis:
+- Banking: ICICIBANK
+- IT Services: HCLTECH
+- Cement: ULTRACEMCO
+- Automobiles: M&M
+- Consumer Beverages: VBL (December year-end)
+- Capital Goods: ABB (December year-end)
+- Mining: COALINDIA
+- Power Utilities: NTPC
+
+Workflow run 43530539797 completed successfully on main commit d28acc4. The coverage CSV reports all 8/8 issuers with quarter/half-year plus annual coverage and zero parser failures. Coal India’s latest available flow period was selected as half-year rather than forcing a three-month quarter. The run database contains 392 NSE observations plus the 24 MCX BSE source observations = 416 total records across 9 symbols.
+
+The uploaded single SQLite artifact was downloaded and queried directly; the MCX BSE URL and reference ID remain attached to its 24 rows.
+
+**Next:** run a full-universe diagnostic import for all 64 symbols with four latest quarterly and three annual periods per basis. Preserve any remaining issuer gaps in the coverage report; a successful workflow must not be treated as an all-64 acceptance unless each company has the required periods or an explicit exception/source fallback.

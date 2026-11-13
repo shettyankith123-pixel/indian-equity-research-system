@@ -56,12 +56,17 @@ def decimal_fact(facts: dict[str, Any], names: tuple[str, ...], context: str) ->
 
 
 def choose_duration_context(
-    contexts: dict[str, Any], expected_end: date, period_kind: str
+    contexts: dict[str, Any],
+    expected_end: date,
+    period_kind: str,
+    facts: dict[str, Any] | None = None,
+    preferred_tags: tuple[str, ...] = (),
 ) -> tuple[str, date, date]:
-    """Select a reported duration context by exact end date and duration.
+    """Select a duration context by dates and by the presence of reported facts.
 
-    Context IDs differ between issuers; the start/end dates are the authoritative
-    selector. Half-year and transition periods are kept distinct from quarters.
+    NSE issuers use different context IDs for the main financial statement and
+    attached schedules. Among contexts with the required duration, prefer the
+    one containing the most relevant financial facts.
     """
     ranges = {
         "quarter": (70, 120, 91),
@@ -71,7 +76,7 @@ def choose_duration_context(
     if period_kind not in ranges:
         raise ValueError(f"unsupported period_kind: {period_kind}")
     min_days, max_days, target_days = ranges[period_kind]
-    candidates: list[tuple[int, str, date, date]] = []
+    candidates: list[tuple[int, int, str, date, date]] = []
     for context_id, context in contexts.items():
         start = parse_iso_or_nse(context.get("start") or context.get("start_date"))
         end = parse_iso_or_nse(context.get("end") or context.get("end_date"))
@@ -79,7 +84,13 @@ def choose_duration_context(
             continue
         span = (end - start).days + 1
         if min_days <= span <= max_days:
-            candidates.append((abs(span - target_days), context_id, start, end))
+            fact_count = 0
+            if facts and preferred_tags:
+                fact_count = sum(
+                    1 for tag in preferred_tags
+                    if facts.get(tag, {}).get(context_id) not in (None, "")
+                )
+            candidates.append((fact_count, -abs(span - target_days), context_id, start, end))
     if not candidates:
         durations = []
         for context_id, context in contexts.items():
@@ -91,6 +102,16 @@ def choose_duration_context(
             f"no {period_kind} duration context ending {expected_end}; "
             f"available_end_contexts={durations[:30]}"
         )
-    candidates.sort(key=lambda item: (item[0], item[1]))
-    _, context_id, start, end = candidates[0]
+    candidates.sort(key=lambda item: (-item[0], -item[1], item[2]))
+    fact_count, _, context_id, start, end = candidates[0]
+    if facts and preferred_tags and fact_count == 0:
+        fact_tags = sorted(facts)[:80]
+        context_ids = sorted({
+            context_id for tag_facts in facts.values() for context_id in tag_facts
+        })[:80]
+        raise ValueError(
+            f"no mapped financial facts in any {period_kind} context ending {expected_end}; "
+            f"candidate_contexts={[c[2] for c in candidates[:20]]}; "
+            f"available_fact_tags={fact_tags}; fact_context_ids={context_ids}"
+        )
     return context_id, start, end

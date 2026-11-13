@@ -57,3 +57,15 @@ def test_half_year_is_selected_and_retained_as_half_year():
     assert context_id == "OneD"
     assert start == date(2026, 4, 1)
     assert end == date(2026, 9, 30)
+
+
+def test_duration_context_prefers_context_with_relevant_facts():
+    contexts = {
+        "OneD": {"start": "2026-07-01", "end": "2026-09-30"},
+        "OneReportable1D": {"start": "2026-07-01", "end": "2026-09-30"},
+    }
+    facts = {"RevenueFromOperations": {"OneReportable1D": "1234"}}
+    context_id, _, _ = choose_duration_context(
+        contexts, date(2026, 9, 30), "quarter", facts, ("RevenueFromOperations",)
+    )
+    assert context_id == "OneReportable1D"

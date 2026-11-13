@@ -111,7 +111,12 @@ def extract_observations(
     parsed = parse_xbrl(xml_text)
     facts = parsed.get("facts") or {}
     contexts = parsed.get("contexts") or {}
-    context_id, start_date, end_date = choose_duration_context(contexts, expected_end, period_kind)
+    preferred_tags = tuple(
+        tag for aliases, _unit in METRIC_MAP.values() for tag in aliases
+    )
+    context_id, start_date, end_date = choose_duration_context(
+        contexts, expected_end, period_kind, facts, preferred_tags
+    )
     if period_kind == "quarter" and (end_date - start_date).days > 140:
         raise ValueError(f"quarter context unexpectedly spans {(end_date-start_date).days} days")
     if period_kind == "year" and (end_date - start_date).days < 300:
@@ -333,7 +338,7 @@ def main() -> int:
                                     symbol, filing, xbrl_cache[xbrl_url], target, period_kind, retrieved_at
                                 )
                             except ValueError as primary_error:
-                                if label != "quarter":
+                                if label != "quarter" or "no quarter duration context" not in str(primary_error):
                                     raise
                                 # Some issuers report a half-year duration for the same
                                 # period end; store it as half-year, never as a quarter.

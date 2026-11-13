@@ -104,14 +104,15 @@ BUY requires at least 85% data completeness, data no older than 120 days, valuat
 
 GitHub Actions runs the NSE EOD fetch on weekdays at 18:15 India time and retains the normalized data artifact for 90 days. Run it manually from Actions to request a historical trading date. Artifacts are not a hosted persistent database.
 
-## What is not connected yet
+## Current integration boundaries
 
-- INDmoney private account sync is not configured. Import a user-exported CSV; do not put broker credentials in Git.
-- Automated cross-company financial filing PDF/XBRL extraction is not yet implemented.
+- INDmoney holdings can be read in the connected ChatGPT session, but private account sync is not configured inside GitHub Actions. Historical trade reconstruction still requires a user-exported transaction CSV; never put broker credentials in Git.
+- NSE Integrated Filing XBRL ingestion has been implemented and tested on selected issuers. The full 64-company import must be revalidated after the latest parser corrections; partial filing/metric coverage remains possible.
+- Financial statements do not automatically produce fair values. Sector-specific valuation and qualitative governance review must pass before actionable BUY/ACCUMULATE decisions are issued.
 - Automated news ingestion, AI model endpoints, corporate-action-adjusted historical prices, BSE feeds, benchmark-relative event studies and hosted persistent storage remain outstanding.
-- No recommendation is produced from empty template data. Research fields and fair values must be verified and sourced.
+- The full Wealth Scan schedule is intentionally not enabled until the full data and valuation gates pass.
 
-See [implementation status](docs/implementation_status.md) for integration boundaries.
+See [controlled execution plan](docs/project_execution_plan.md) for the single source of truth on progress, acceptance criteria, blockers and run history.
 
 ## Research integrity
 

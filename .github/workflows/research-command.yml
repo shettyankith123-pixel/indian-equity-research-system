@@ -1,0 +1,116 @@
+name: Research Command
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Research action to run
+        required: true
+        type: choice
+        options:
+          - market-brief
+          - wealth-scan
+          - company-scan
+          - sector-scan
+          - portfolio-review
+          - find-opportunities
+      symbol:
+        description: Company name or NSE symbol (for company-scan)
+        required: false
+        type: string
+      sector:
+        description: Sector name (for sector-scan)
+        required: false
+        type: string
+      market_date:
+        description: Optional NSE trading date YYYY-MM-DD (for market-brief; blank finds latest available)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  research-command:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install research CLI
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Run requested research command
+        env:
+          COMMAND: ${{ inputs.command }}
+          SYMBOL: ${{ inputs.symbol }}
+          SECTOR: ${{ inputs.sector }}
+          MARKET_DATE: ${{ inputs.market_date }}
+        run: |
+          set -euo pipefail
+          mkdir -p reports/commands
+
+          case "$COMMAND" in
+            market-brief)
+              FETCH_ARGS=()
+              if [ -n "$MARKET_DATE" ]; then FETCH_ARGS+=(--date "$MARKET_DATE"); fi
+              python scripts/fetch_latest_nse_eod.py ${FETCH_ARGS[@]} --db data/research.db
+              ies market-brief --db data/research.db --output reports/commands/market-brief.json
+              ;;
+            wealth-scan)
+              ies wealth-scan \
+                --watchlist config/watchlists/indian_watchlist.yaml \
+                --research-inputs data/templates/research_inputs.csv \
+                --output-dir reports/commands/wealth-scan \
+                --db data/research.db
+              ;;
+            company-scan)
+              if [ -z "$SYMBOL" ]; then echo "symbol is required for company-scan"; exit 2; fi
+              ies company-scan "$SYMBOL" \
+                --research-inputs data/templates/research_inputs.csv \
+                --universe data/universe/indian_watchlist_companies.csv \
+                | tee reports/commands/company-scan.json
+              ;;
+            sector-scan)
+              if [ -z "$SECTOR" ]; then echo "sector is required for sector-scan"; exit 2; fi
+              ies sector-scan --sector "$SECTOR" \
+                --research-inputs data/templates/research_inputs.csv \
+                --universe data/universe/indian_watchlist_companies.csv \
+                | tee reports/commands/sector-scan.json
+              ;;
+            portfolio-review)
+              ies portfolio-review \
+                --snapshot data/imports/indmoney_holdings_snapshot_2026-11-13.csv \
+                --db data/research.db \
+                | tee reports/commands/portfolio-review.json
+              ;;
+            find-opportunities)
+              ies opportunity-scan \
+                --watchlist config/watchlists/indian_watchlist.yaml \
+                --research-inputs data/templates/research_inputs.csv \
+                --output reports/commands/opportunities.csv
+              ;;
+            *)
+              echo "Unsupported research command: $COMMAND"
+              exit 2
+              ;;
+          esac
+
+      - name: Upload command report and supporting data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-command-${{ inputs.command }}-${{ github.run_id }}
+          path: |
+            reports/commands/
+            data/market/
+          if-no-files-found: warn
+          retention-days: 30

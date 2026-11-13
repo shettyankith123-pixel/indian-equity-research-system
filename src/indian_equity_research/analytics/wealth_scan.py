@@ -12,6 +12,112 @@ from indian_equity_research.analytics.decision_engine import decide
 from indian_equity_research.models.recommendations import ResearchInput
 
 
+def _normalise_lookup(value: str) -> str:
+    return re.sub(r"[^A-Z0-9]", "", value.upper())
+
+
+def load_company_universe(path: Path = Path("data/universe/indian_watchlist_companies.csv")) -> dict[str, dict[str, str]]:
+    """Load the issuer and sector reference; missing file means no metadata, not an error."""
+    if not path.exists():
+        return {}
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        return {
+            row["symbol"].strip().upper(): {
+                key: (value or "").strip()
+                for key, value in row.items()
+                if key is not None
+            }
+            for row in csv.DictReader(handle)
+            if row.get("symbol", "").strip()
+        }
+
+
+def resolve_company_symbol(
+    query: str,
+    universe_path: Path = Path("data/universe/indian_watchlist_companies.csv"),
+) -> str:
+    """Resolve symbols or common issuer-name queries using the local universe manifest."""
+    raw = query.strip()
+    key = _normalise_lookup(raw)
+    universe = load_company_universe(universe_path)
+    for symbol, record in universe.items():
+        symbol_key = _normalise_lookup(symbol)
+        issuer_key = _normalise_lookup(record.get("issuer_name", ""))
+        if key and (key == symbol_key or key == issuer_key or issuer_key.startswith(key)):
+            return symbol
+    aliases = {
+        "ICICI": "ICICIBANK",
+        "ICICIBANK": "ICICIBANK",
+        "STATEBANKOFINDIA": "SBIN",
+        "SBI": "SBIN",
+        "TATACONSULTANCYSERVICES": "TCS",
+        "VARUNBEVERAGES": "VBL",
+        "SAMVARDHANAMOTHERSON": "MOTHERSON",
+        "MAHINDRAANDMAHINDRA": "M&M",
+        "LARSENTOUBRO": "LT",
+        "POWERGRIDCORPORATION": "POWERGRID",
+    }
+    return aliases.get(key, raw.upper().replace(" ", ""))
+
+
+def resolve_sector_name(
+    query: str,
+    universe_path: Path = Path("data/universe/indian_watchlist_companies.csv"),
+) -> str:
+    """Resolve common sector shorthand to the taxonomy used by the universe manifest."""
+    raw = query.strip()
+    key = _normalise_lookup(raw)
+    aliases = {
+        "BANK": "Banking",
+        "BANKS": "Banking",
+        "BANKING": "Banking",
+        "IT": "IT Services",
+        "TECH": "IT Services",
+        "TECHNOLOGY": "IT Services",
+        "IT_SERVICES": "IT Services",
+        "AUTO": "Automobiles",
+        "AUTOMOBILE": "Automobiles",
+        "AUTOMOBILES": "Automobiles",
+        "FMCG": "FMCG",
+        "CONSUMER": "FMCG",
+        "METAL": "Metals",
+        "METALS": "Metals",
+        "CAPITALGOODS": "Capital Goods",
+        "POWER": "Power Utilities",
+        "POWERUTILITIES": "Power Utilities",
+        "CHEMICALS": "Specialty Chemicals",
+        "SPECIALTYCHEMICALS": "Specialty Chemicals",
+    }
+    if key in aliases:
+        return aliases[key]
+    universe = load_company_universe(universe_path)
+    for record in universe.values():
+        sector = record.get("sector", "")
+        if _normalise_lookup(sector) == key:
+            return sector
+    return raw
+
+
+def _empty_research_input(symbol: str, sector: str, *, held: bool = False) -> ResearchInput:
+    return ResearchInput(
+        symbol=symbol,
+        sector=sector or "Unclassified",
+        current_price=None,
+        fair_value_base=None,
+        fair_value_low=None,
+        fair_value_high=None,
+        quality_score=None,
+        growth_score=None,
+        balance_sheet_score=None,
+        governance_score=None,
+        data_completeness=None,
+        data_as_of=None,
+        valuation_confidence=None,
+        held=held,
+        notes="No complete reviewed valuation input is available; this is a research-readiness assessment.",
+    )
+
+
 def read_watchlist(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8")
     symbols: list[str] = []
@@ -109,25 +215,48 @@ def build_decisions(watchlist_path: Path, research_path: Path, *, today: Optiona
     return decisions
 
 
-def build_company_decision(symbol: str, research_path: Path, *, today: Optional[date] = None) -> dict[str, object]:
+def build_company_decision(
+    symbol: str,
+    research_path: Path,
+    *,
+    today: Optional[date] = None,
+    universe_path: Path = Path("data/universe/indian_watchlist_companies.csv"),
+) -> dict[str, object]:
+    canonical = resolve_company_symbol(symbol, universe_path)
     research = load_research_inputs(research_path)
-    item = research.get(symbol.upper())
+    item = research.get(canonical)
     if item is None:
-        item = ResearchInput(
-            symbol=symbol.upper(), sector="Unclassified", current_price=None, fair_value_base=None,
-            fair_value_low=None, fair_value_high=None, quality_score=None, growth_score=None,
-            balance_sheet_score=None, governance_score=None, data_completeness=None,
-            data_as_of=None, valuation_confidence=None,
-        )
+        metadata = load_company_universe(universe_path).get(canonical, {})
+        item = _empty_research_input(canonical, metadata.get("sector", "Unclassified"))
     return decide(item, today=today).to_dict()
 
 
-def build_sector_decisions(sector: str, research_path: Path, *, today: Optional[date] = None) -> list[dict[str, object]]:
+def build_sector_decisions(
+    sector: str,
+    research_path: Path,
+    *,
+    today: Optional[date] = None,
+    universe_path: Path = Path("data/universe/indian_watchlist_companies.csv"),
+) -> list[dict[str, object]]:
     research = load_research_inputs(research_path)
-    selected = [item for item in research.values() if item.sector.casefold() == sector.casefold()]
-    decisions = [decide(item, today=today).to_dict() for item in selected]
-    order = {"BUY": 0, "ACCUMULATE": 1, "HOLD": 2, "WAIT": 3, "ASSESS": 4, "REDUCE": 5, "EXIT": 6, "AVOID": 7}
-    return sorted(decisions, key=lambda row: (order.get(str(row["recommendation"]), 8), row["symbol"]))
+    universe = load_company_universe(universe_path)
+    canonical_sector = resolve_sector_name(sector, universe_path)
+    selected: dict[str, ResearchInput] = {
+        symbol: item
+        for symbol, item in research.items()
+        if item.sector.casefold() == canonical_sector.casefold()
+    }
+    # Include every company in the reference universe, even when research is missing.
+    # That makes sector coverage gaps explicit rather than returning an empty sector.
+    for symbol, metadata in universe.items():
+        if metadata.get("sector", "").casefold() == canonical_sector.casefold():
+            selected.setdefault(symbol, _empty_research_input(symbol, canonical_sector))
+    decisions = [decide(item, today=today).to_dict() for item in selected.values()]
+    order = {
+        "BUY": 0, "ACCUMULATE": 1, "HOLD": 2, "WAIT": 3, "ASSESS": 4,
+        "OBSERVE": 5, "REDUCE": 6, "EXIT": 7, "AVOID": 8,
+    }
+    return sorted(decisions, key=lambda row: (order.get(str(row["recommendation"]), 9), row["symbol"]))
 
 
 def write_decision_register(decisions: list[dict[str, object]], output_csv: Path, output_md: Path) -> None:

@@ -36,6 +36,21 @@ pip install -e .[dev]
 pytest
 ```
 
+## ChatGPT command interface
+
+You can use the following phrases in the connected ChatGPT conversation. The assistant dispatches the matching Research Command workflow and reads its report artifact:
+
+- MARKET BRIEF
+- WEALTH SCAN
+- COMPANY SCAN ICICI BANK
+- SECTOR SCAN BANKING
+- PORTFOLIO REVIEW
+- FIND OPPORTUNITIES
+
+The local MARKET BRIEF workflow fetches official NSE EOD breadth. ChatGPT adds live headlines, global context and catalyst interpretation separately. A successful command run does not bypass data-quality gates: missing valuation inputs remain ASSESS.
+
+See [command interface](docs/command_interface.md) for exact behaviour and current boundaries.
+
 ## Commands
 
 ### Download official NSE EOD equity data
@@ -110,7 +125,7 @@ GitHub Actions runs the NSE EOD fetch on weekdays at 18:15 India time and retain
 - NSE Integrated Filing XBRL ingestion has been implemented and tested on selected issuers. The full 64-company import must be revalidated after the latest parser corrections; partial filing/metric coverage remains possible.
 - Financial statements do not automatically produce fair values. Sector-specific valuation and qualitative governance review must pass before actionable BUY/ACCUMULATE decisions are issued.
 - Automated news ingestion, AI model endpoints, corporate-action-adjusted historical prices, BSE feeds, benchmark-relative event studies and hosted persistent storage remain outstanding.
-- The full Wealth Scan schedule is intentionally not enabled until the full data and valuation gates pass.
+- The full Wealth Scan schedule is intentionally not enabled until the full data and valuation gates pass. On-demand command execution is available through the Research Command GitHub Actions workflow.
 
 See [controlled execution plan](docs/project_execution_plan.md) for the single source of truth on progress, acceptance criteria, blockers and run history.
 

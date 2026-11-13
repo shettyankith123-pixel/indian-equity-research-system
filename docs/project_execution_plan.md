@@ -248,3 +248,33 @@ Append one row for each meaningful run. Do not remove failed runs; they explain 
 7. Build and verify the first full Wealth Scan; only then activate its schedule.
 
 **No time estimate is recorded here.** Work advances by completed acceptance gates, not by promising a finish date that depends on unverified data and external exports.
+
+
+### Gate 9 — Chat command interface
+
+**Status: Implemented locally; pending GitHub workflow verification**
+
+The command layer accepts natural phrases and routes them to the existing CLI:
+- MARKET BRIEF — latest available NSE EOD breadth in the local runner; ChatGPT performs the live-news narrative separately.
+- WEALTH SCAN — 64-stock decision register from reviewed research inputs.
+- COMPANY SCAN <company> — resolves names/symbols against the universe manifest.
+- SECTOR SCAN <sector> — includes all universe constituents and explicit ASSESS rows for missing research.
+- PORTFOLIO REVIEW — uses the dated broker holdings snapshot and marks missing transaction history.
+- FIND OPPORTUNITIES — returns only outside-watchlist candidates that pass the existing action gates.
+
+A manual Research Command GitHub Actions workflow uploads each report artifact. A command run is not proof that the underlying research is investment-ready; source coverage and valuation gates remain in force.
+
+**Acceptance:** command aliases and company/sector resolution pass unit tests; market data, portfolio snapshot and all six command paths are smoke-tested; GitHub workflow succeeds and publishes a report artifact.
+
+
+
+## 8. Command-interface milestone update — 13 November 2026
+
+- Friendly command routes added to the CLI.
+- Company name resolution and sector universe coverage added.
+- Portfolio review reads the saved 7-position INDmoney snapshot and labels it snapshot-only.
+- Latest-available NSE EOD helper added; 11-Nov-2026 smoke returned 3,462 equity records.
+- Manual Research Command workflow added for six supported command types.
+- Local validation: Python compilation passed; full unit suite passed; CLI smoke passed for WEALTH SCAN, COMPANY SCAN, SECTOR SCAN, PORTFOLIO REVIEW, FIND OPPORTUNITIES and MARKET BRIEF.
+- Remaining: commit the command interface, verify GitHub CI and one dispatched GitHub command artifact. Financial valuation and complete investment recommendations remain separate unfinished gates.
+

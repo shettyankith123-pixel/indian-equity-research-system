@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
+import sys
 from datetime import date
 from pathlib import Path
 from typing import Sequence
@@ -12,7 +14,8 @@ from indian_equity_research.analytics.allocation import build_allocation_plan, l
 from indian_equity_research.analytics.event_study import analyse_events
 from indian_equity_research.analytics.market_scan import build_market_scan, write_market_scan
 from indian_equity_research.analytics.wealth_scan import (
-    build_company_decision, build_decisions, build_opportunity_list, build_sector_decisions, write_decision_register,
+    build_company_decision, build_decisions, build_opportunity_list, build_sector_decisions,
+    resolve_company_symbol, resolve_sector_name, write_decision_register,
 )
 from indian_equity_research.ingestion.csv_loader import parse_financial_csv
 from indian_equity_research.ingestion.nse_bhavcopy import download_udiff_bhavcopy, parse_udiff_zip, write_eod_csv
@@ -63,10 +66,20 @@ def _parser() -> argparse.ArgumentParser:
     company = sub.add_parser("company-scan", help="Show one company's latest imported evidence and decision")
     company.add_argument("symbol")
     company.add_argument("--research-inputs", type=Path, default=Path("data/templates/research_inputs.csv"))
+    company.add_argument("--universe", type=Path, default=Path("data/universe/indian_watchlist_companies.csv"))
 
-    sector = sub.add_parser("sector-scan", help="Compare all researched companies classified in one sector")
+    sector = sub.add_parser("sector-scan", help="Compare all companies in one sector, including missing-data assessments")
     sector.add_argument("--sector", required=True)
     sector.add_argument("--research-inputs", type=Path, default=Path("data/templates/research_inputs.csv"))
+    sector.add_argument("--universe", type=Path, default=Path("data/universe/indian_watchlist_companies.csv"))
+
+    portfolio_review = sub.add_parser("portfolio-review", help="Review the latest saved broker holdings snapshot")
+    portfolio_review.add_argument("--snapshot", type=Path, default=Path("data/imports/indmoney_holdings_snapshot_2026-11-13.csv"))
+    portfolio_review.add_argument("--db", type=Path, default=Path("data/research.db"))
+
+    market_brief = sub.add_parser("market-brief", help="Summarise NSE EOD breadth; the ChatGPT Market Brief adds live news research")
+    market_brief.add_argument("--db", type=Path, default=Path("data/research.db"))
+    market_brief.add_argument("--output", type=Path, default=Path("reports/market_scan.json"))
 
     opportunities = sub.add_parser("opportunity-scan", help="Rank actionable BUY/ACCUMULATE ideas outside the existing 64-stock watchlist")
     opportunities.add_argument("--watchlist", type=Path, default=Path("config/watchlists/indian_watchlist.yaml"))
@@ -85,8 +98,101 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _route_friendly_command(argv: Sequence[str]) -> list[str]:
+    """Translate short natural-language command phrases into existing CLI subcommands."""
+    tokens = list(argv)
+    if len(tokens) < 2:
+        return tokens
+    first, second = tokens[0].upper(), tokens[1].upper()
+    rest = tokens[2:]
+    if (first, second) == ("WEALTH", "SCAN"):
+        return ["wealth-scan", *rest]
+    if (first, second) == ("MARKET", "SCAN"):
+        return ["market-scan", *rest]
+    if (first, second) == ("MARKET", "BRIEF"):
+        return ["market-brief", *rest]
+    if (first, second) == ("PORTFOLIO", "REVIEW"):
+        return ["portfolio-review", *rest]
+    if (first, second) in {("FIND", "OPPORTUNITIES"), ("OPPORTUNITY", "SCAN")}:
+        return ["opportunity-scan", *rest]
+    if (first, second) == ("COMPANY", "SCAN"):
+        name_parts: list[str] = []
+        options: list[str] = []
+        found_option = False
+        for token in rest:
+            if token.startswith("--"):
+                found_option = True
+            (options if found_option else name_parts).append(token)
+        if not name_parts:
+            raise ValueError("Use COMPANY SCAN followed by a company name or NSE symbol, e.g. COMPANY SCAN ICICI BANK.")
+        return ["company-scan", " ".join(name_parts), *options]
+    if (first, second) == ("SECTOR", "SCAN"):
+        sector_parts: list[str] = []
+        options: list[str] = []
+        found_option = False
+        for token in rest:
+            if token.startswith("--"):
+                found_option = True
+            (options if found_option else sector_parts).append(token)
+        if not sector_parts:
+            raise ValueError("Use SECTOR SCAN followed by a sector, e.g. SECTOR SCAN BANKING.")
+        return ["sector-scan", "--sector", " ".join(sector_parts), *options]
+    return tokens
+
+
+def _portfolio_snapshot_report(snapshot_path: Path, db_path: Path) -> dict[str, object]:
+    """Summarise dated INDmoney positions; never infer historical transactions."""
+    if snapshot_path.exists():
+        with snapshot_path.open(newline="", encoding="utf-8-sig") as handle:
+            rows = list(csv.DictReader(handle))
+        if not rows:
+            raise ValueError(f"Holdings snapshot is empty: {snapshot_path}")
+        as_of = rows[0].get("as_of_date", "")
+        total_invested = sum(float(row.get("invested_value_inr") or 0) for row in rows)
+        total_market = sum(float(row.get("market_value_inr") or 0) for row in rows)
+        total_pnl = sum(float(row.get("unrealized_pnl_inr") or 0) for row in rows)
+        age_days = (date.today() - date.fromisoformat(as_of)).days if as_of else None
+        return {
+            "status": "snapshot_only",
+            "as_of_date": as_of or None,
+            "snapshot_age_days": age_days,
+            "stale_warning": bool(age_days is not None and age_days > 30),
+            "positions": rows,
+            "position_count": len(rows),
+            "invested_value_inr": round(total_invested, 2),
+            "market_value_inr": round(total_market, 2),
+            "unrealised_pnl_inr": round(total_pnl, 2),
+            "transaction_history_available": False,
+            "limitations": [
+                "This is a holdings snapshot, not a transaction-by-transaction ledger.",
+                "Buy/sell dates, charges, taxes and historical cash movements are not inferred.",
+            ],
+        }
+    positions = calculate_positions(db_path)
+    return {
+        "status": "transaction_ledger",
+        "positions": [
+            {
+                "symbol": p.symbol,
+                "quantity": str(p.quantity),
+                "average_cost": str(p.average_cost),
+                "realised_pnl": str(p.realised_pnl),
+            }
+            for p in positions
+        ],
+        "position_count": len(positions),
+        "transaction_history_available": True,
+        "limitations": [],
+    }
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    args = _parser().parse_args(argv)
+    raw_argv = list(argv) if argv is not None else sys.argv[1:]
+    try:
+        routed_argv = _route_friendly_command(raw_argv)
+    except ValueError as exc:
+        print(str(exc)); return 2
+    args = _parser().parse_args(routed_argv)
     if args.command in {"import-financials", "bank-ratios", "db-status"}:
         repository = FinancialRepository(args.db)
         if args.command == "import-financials":
@@ -152,16 +258,29 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "company-scan":
-        print(json.dumps(build_company_decision(args.symbol, args.research_inputs), indent=2))
+        symbol = resolve_company_symbol(args.symbol, args.universe)
+        print(json.dumps(build_company_decision(symbol, args.research_inputs, universe_path=args.universe), indent=2))
         return 0
 
     if args.command == "sector-scan":
-        rows = build_sector_decisions(args.sector, args.research_inputs)
+        sector_name = resolve_sector_name(args.sector, args.universe)
+        rows = build_sector_decisions(sector_name, args.research_inputs, universe_path=args.universe)
         print(json.dumps({"sector": args.sector, "companies_researched": len(rows), "decisions": rows}, indent=2))
         return 0
 
-    if args.command == "market-scan":
+    if args.command == "portfolio-review":
+        result = _portfolio_snapshot_report(args.snapshot, args.db)
+        print(json.dumps(result, indent=2))
+        return 0
+
+    if args.command in {"market-scan", "market-brief"}:
         result = build_market_scan(args.db)
+        if args.command == "market-brief":
+            result["chat_market_brief_note"] = (
+                "This local command reports NSE EOD breadth only. For headline explanations, "
+                "global macro context and next-session catalyst analysis, the ChatGPT MARKET BRIEF "
+                "command performs a separate live-research step."
+            )
         write_market_scan(result, args.output)
         print(json.dumps(result, indent=2))
         return 0 if result.get("status") == "ok" else 2

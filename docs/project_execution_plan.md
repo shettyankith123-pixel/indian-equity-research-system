@@ -252,7 +252,7 @@ Append one row for each meaningful run. Do not remove failed runs; they explain 
 
 ### Gate 9 — Chat command interface
 
-**Status: Implemented locally; pending GitHub workflow verification**
+**Status: Complete — CI and a real GitHub Actions command dispatch passed**
 
 The command layer accepts natural phrases and routes them to the existing CLI:
 - MARKET BRIEF — latest available NSE EOD breadth in the local runner; ChatGPT performs the live-news narrative separately.
@@ -262,9 +262,9 @@ The command layer accepts natural phrases and routes them to the existing CLI:
 - PORTFOLIO REVIEW — uses the dated broker holdings snapshot and marks missing transaction history.
 - FIND OPPORTUNITIES — returns only outside-watchlist candidates that pass the existing action gates.
 
-A manual Research Command GitHub Actions workflow uploads each report artifact. A command run is not proof that the underlying research is investment-ready; source coverage and valuation gates remain in force.
+A manual Research Command GitHub Actions workflow uploads each report artifact. CI passed on commit 2525004. A real PORTFOLIO REVIEW dispatch completed successfully (workflow run 43452523021; artifact 14053355189). Local smoke tests passed for all six commands. A command run is not proof that the underlying research is investment-ready; source coverage and valuation gates remain in force.
 
-**Acceptance:** command aliases and company/sector resolution pass unit tests; market data, portfolio snapshot and all six command paths are smoke-tested; GitHub workflow succeeds and publishes a report artifact.
+**Acceptance: PASSED** — command aliases and company/sector resolution pass unit tests; market data and portfolio snapshot commands are smoke-tested; CI is green; GitHub workflow succeeds and publishes a report artifact. The local market report is EOD breadth; live-news narrative is added by ChatGPT separately.
 
 
 
@@ -278,3 +278,5 @@ A manual Research Command GitHub Actions workflow uploads each report artifact. 
 - Local validation: Python compilation passed; full unit suite passed; CLI smoke passed for WEALTH SCAN, COMPANY SCAN, SECTOR SCAN, PORTFOLIO REVIEW, FIND OPPORTUNITIES and MARKET BRIEF.
 - Remaining: commit the command interface, verify GitHub CI and one dispatched GitHub command artifact. Financial valuation and complete investment recommendations remain separate unfinished gates.
 
+
+| 2026-11-13 | 2525004 | [43452523021](https://github.com/shettyankith123-pixel/indian-equity-research-system/actions/runs/43452523021) | Research Command → portfolio-review | Passed; artifact 14053355189 published | Reuse command dispatcher; future chat commands dispatch same workflow |

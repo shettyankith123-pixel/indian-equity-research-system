@@ -306,3 +306,11 @@ NSE Integrated Filing returns no MCX listing rows, including after the symbol-on
 ### MCX workflow path correction — 14 November 2026
 
 The first full workflow dispatch proved the MCX observations were imported (24 rows), but artifact inspection found they had been written to a second SQLite file because the manual import path omitted the importer's github-<run-id> folder prefix. The workflow now targets the exact same data/financials/runs/github-<run-id>/financials.sqlite file created by the NSE ingestion step. A fresh run must verify MCX and NSE records coexist in the single database before this sub-gate is considered complete.
+
+
+**Unified-artifact acceptance: PASSED — 14 November 2026**
+- Workflow run 43530256421 completed successfully on commit f59c996.
+- Artifact 14086359820 contains exactly one financials.sqlite.
+- Direct SQLite inspection verified 24 MCX observations and 23 Siemens NSE observations in that same database.
+- All 24 MCX observations retain the BSE source URL and reference BSE:534091:2026-11-03:Q2FY27:006dffdb.
+- The 23 Siemens observations are quarterly NSE facts; the 18-month annual transition period remains intentionally unimported because the available XBRL attachment exposes only a 12-month context.

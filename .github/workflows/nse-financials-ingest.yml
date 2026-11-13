@@ -1,0 +1,53 @@
+name: NSE Quarterly and Annual Financial Ingestion
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: Optional comma-separated symbol subset; blank runs all 64
+        required: false
+        default: ""
+      quarter_count:
+        description: Most recent quarterly periods to ingest per reporting basis
+        required: false
+        default: "4"
+      annual_count:
+        description: Most recent annual periods to ingest per reporting basis
+        required: false
+        default: "3"
+  schedule:
+    - cron: "30 3 * * 6" # Saturday 09:00 IST
+
+permissions:
+  contents: read
+
+jobs:
+  ingest-financials:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install NSE XBRL parser and research package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[financials]"
+      - name: Fetch and normalize quarterly and annual NSE filings
+        env:
+          SYMBOLS: ${{ inputs.symbols }}
+          QUARTER_COUNT: ${{ inputs.quarter_count || '4' }}
+          ANNUAL_COUNT: ${{ inputs.annual_count || '3' }}
+        run: |
+          ARGS=()
+          if [ -n "$SYMBOLS" ]; then ARGS+=(--symbols "$SYMBOLS"); fi
+          python scripts/ingest_nse_integrated_filings.py             --quarter-count "$QUARTER_COUNT"             --annual-count "$ANNUAL_COUNT"             --delay-seconds 0.35             "${ARGS[@]}"
+      - name: Upload financial database, source observations and coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: nse-financial-database-${{ github.run_id }}
+          path: data/financials/
+          if-no-files-found: error
+          retention-days: 90

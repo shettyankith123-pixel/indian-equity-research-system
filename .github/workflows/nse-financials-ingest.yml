@@ -44,6 +44,11 @@ jobs:
           ARGS=()
           if [ -n "$SYMBOLS" ]; then ARGS+=(--symbols "$SYMBOLS"); fi
           python scripts/ingest_nse_integrated_filings.py             --quarter-count "$QUARTER_COUNT"             --annual-count "$ANNUAL_COUNT"             --delay-seconds 0.35             --run-id "github-${GITHUB_RUN_ID}"             "${ARGS[@]}"
+      - name: Import verified MCX BSE source observations
+        run: |
+          ies import-financials data/imports/mcx_bse_q2_fy27_observations.csv --db "data/financials/runs/${GITHUB_RUN_ID}/financials.sqlite"
+          ies db-status --db "data/financials/runs/${GITHUB_RUN_ID}/financials.sqlite"
+
       - name: Upload financial database, source observations and coverage
         uses: actions/upload-artifact@v4
         with:

@@ -280,3 +280,24 @@ A manual Research Command GitHub Actions workflow uploads each report artifact. 
 
 
 | 2026-11-13 | 2525004 | [43452523021](https://github.com/shettyankith123-pixel/indian-equity-research-system/actions/runs/43452523021) | Research Command → portfolio-review | Passed; artifact 14053355189 published | Reuse command dispatcher; future chat commands dispatch same workflow |
+
+
+## 9. MCX BSE financial-source fallback — 14 November 2026
+
+**Status: Partial coverage integrated; source and automated import validated**
+
+NSE Integrated Filing returns no MCX listing rows, including after the symbol-only retry. MCX's official BSE Q2 FY27 attachment was therefore inspected as a separate exchange source:
+- BSE Scrip: 534091; NSE symbol: MCX.
+- Publication date: 3 November 2026.
+- Source reference: BSE:534091:2026-11-03:Q2FY27:006dffdb.
+- The consolidated P&L statement is a scanned page, visually checked and cross-checked with one OCR pass.
+- 24 reported observations are preserved in data/imports/mcx_bse_q2_fy27_observations.csv: revenue from operations, total expenses, PAT and basic EPS for Q1 FY27, Q2 FY27, Q2 FY26, H1 FY27, H1 FY26 and audited FY26.
+- Each observation retains the official BSE PDF URL, publication date and filing reference.
+- The canonical CSV loader now accepts the explicit transition_period model kind.
+- The scheduled/manual NSE financial workflow imports the MCX CSV into its own unique run database before artifact upload.
+
+**Validation:** 5 focused tests passed (24-row parser/provenance and SQLite round-trip plus existing CSV loader tests); workflow YAML parses and the new shell step passes bash -n.
+
+**Data boundary:** This fallback imports the consolidated P&L/EPS fields only. It does not yet import MCX standalone data, balance-sheet instant facts or cash-flow figures. MCX NSE XBRL listing coverage remains zero; the BSE source is a clearly labelled separate-source fallback.
+
+**Still open:** Siemens's disclosed 18-month 2024-10-01 to 2026-03-31 transition year has no matching 18-month context in the inspected NSE XBRL attachment; normal annual extraction is deliberately rejected for that target. The cross-sector batch and full 64-company import must wait for these source-specific rules and remaining issuer checks to pass.

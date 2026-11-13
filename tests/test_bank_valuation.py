@@ -18,7 +18,7 @@ def test_base_case_justified_price_to_book() -> None:
 
 
 def test_implied_roe_from_market_multiple() -> None:
-    assert implied_roe(3.17, 0.11, 0.07) == pytest.approx(0.1962)
+    assert implied_roe(3.17, 0.11, 0.07) == pytest.approx(0.1968)
 
 
 def test_growth_must_be_below_cost_of_equity() -> None:

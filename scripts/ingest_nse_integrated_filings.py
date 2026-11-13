@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from nse_xbrl import NSEClient, parse_xbrl
-from indian_equity_research.ingestion.xbrl_contexts import parse_iso_or_nse, choose_duration_context, create_run_directory
+from indian_equity_research.ingestion.xbrl_contexts import parse_iso_or_nse, choose_duration_context, create_run_directory, period_kind_for_target
 
 from indian_equity_research.models.financials import (
     FinancialObservation,

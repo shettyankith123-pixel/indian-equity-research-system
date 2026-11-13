@@ -2,7 +2,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from urllib.parse import urljoin
-from nse_xbrl import FilingResult, NSEClient
+from nse_xbrl import FilingResult, NSEClient, parse_xbrl
 
 SYMBOL = "ICICIBANK"
 ISSUER = "ICICI Bank Limited"
@@ -33,7 +33,22 @@ def main() -> int:
         xbrl_url=str(xbrl_url),
     )
     if result.period_end is None or result.q_pat is None:
-        raise RuntimeError("XBRL was downloaded but period/PAT could not be parsed; do not import partial facts.")
+        parsed = parse_xbrl(xml_text)
+        Path("nse-financials-debug.xml").write_text(xml_text, encoding="utf-8")
+        interesting = {
+            tag: values for tag, values in parsed["facts"].items()
+            if any(word in tag.lower() for word in ("profit", "pat", "revenue", "income", "result"))
+        }
+        print(json.dumps({
+            "filing_metadata": row,
+            "xbrl_url": str(xbrl_url),
+            "xml_prefix": xml_text[:600],
+            "context_ids": list(parsed["contexts"].keys())[:80],
+            "context_examples": parsed["contexts"],
+            "interesting_facts": interesting,
+            "fact_count": len(parsed["facts"]),
+        }, indent=2, default=str))
+        raise RuntimeError("XBRL downloaded but parser mapping did not produce period/PAT. Debug details printed; no financials imported.")
     output = {
         "symbol": SYMBOL, "company_name": result.company_name, "seq_id": result.seq_id,
         "period_start": result.period_start.isoformat() if result.period_start else None,

@@ -23,6 +23,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nse-financials-smoke
-          path: financials-smoke.json
-          if-no-files-found: error
+          path: |
+            financials-smoke.json
+            nse-financials-debug.xml
+          if-no-files-found: ignore
+          if: always()
           retention-days: 30

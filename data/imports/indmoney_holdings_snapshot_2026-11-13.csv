@@ -1,0 +1,8 @@
+as_of_date,symbol,quantity,average_cost_inr,invested_value_inr,price_inr,market_value_inr,unrealized_pnl_inr,source
+2026-11-13,TCS,5,2433.5,12167.5,2407.5,12037.5,-130.0,INDmoney holdings snapshot
+2026-11-13,POWERGRID,10,259.1,2591.0,257.45,2574.5,-16.5,INDmoney holdings snapshot
+2026-11-13,SBIN,2,1000.45,2000.9,1080.0,2160.0,159.1,INDmoney holdings snapshot
+2026-11-13,ICICIBANK,1,1422.0,1422.0,1583.6,1583.6,161.6,INDmoney holdings snapshot
+2026-11-13,NMDC,15,69.8,1047.0,69.8,1047.0,0.0,INDmoney holdings snapshot
+2026-11-13,VBL,1,435.0,435.0,432.8,432.8,-2.2,INDmoney holdings snapshot
+2026-11-13,MOTHERSON,2,155.99,311.98,164.8,329.6,17.62,INDmoney holdings snapshot

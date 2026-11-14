@@ -153,7 +153,7 @@ def normalize_financial_observations(observations: Iterable[FinancialObservation
         equity, equity_method = _equity_from_instant(instant)
         current_assets, current_liabilities = instant.get("current_assets"), instant.get("current_liabilities")
         cfo, capex = flow.get("net_cash_from_operating_activities"), flow.get("capital_expenditure")
-        fcf = cfo - abs(capex) if cfo is not None and capex is not None else None
+        levered_fcf_proxy = cfo - abs(capex) if cfo is not None and capex is not None else None
 
         prior_snapshots = [
             (snap_date, pub_date, values)
@@ -161,6 +161,15 @@ def normalize_financial_observations(observations: Iterable[FinancialObservation
             if snap_date < end and 330 <= (end - snap_date).days <= 400
         ]
         prior = max(prior_snapshots, key=lambda x: (x[0], x[1]))[2] if prior_snapshots else {}
+        prior_debt = prior.get("borrowings")
+        if prior_debt is None:
+            prior_current, prior_noncurrent = prior.get("current_borrowings"), prior.get("non_current_borrowings")
+            if prior_current is not None and prior_noncurrent is not None:
+                prior_debt = prior_current + prior_noncurrent
+        net_borrowing = debt - prior_debt if debt is not None and prior_debt is not None else None
+        # True FCFE requires net borrowing (closing debt less prior-year debt).
+        # CFO minus capex alone is a levered-FCF proxy, not full FCFE.
+        fcfe = levered_fcf_proxy + net_borrowing if levered_fcf_proxy is not None and net_borrowing is not None else None
         prior_equity, prior_equity_method = _equity_from_instant(prior)
         prior_assets = prior.get("total_assets")
         avg_equity = (equity + prior_equity) / 2 if equity is not None and prior_equity is not None else None
@@ -201,7 +210,9 @@ def normalize_financial_observations(observations: Iterable[FinancialObservation
             "interest_coverage_proxy": safe_div(ebit, finance_cost),
             "operating_cash_flow": cfo,
             "capital_expenditure_outflow": abs(capex) if capex is not None else None,
-            "free_cash_flow_to_equity_proxy": fcf,
+            "levered_free_cash_flow_proxy": levered_fcf_proxy,
+            "net_borrowing": net_borrowing,
+            "free_cash_flow_to_equity": fcfe,
             "cfo_to_pat": safe_div(cfo, pat),
             "total_assets": assets,
             "total_equity": equity,
@@ -250,8 +261,8 @@ def normalize_financial_observations(observations: Iterable[FinancialObservation
         else:
             required = (
                 "revenue","profit_before_tax","profit_after_tax","total_assets","total_equity",
-                "operating_cash_flow","capital_expenditure_outflow","cash_and_cash_equivalents",
-                "total_debt","annualised_ebitda",
+                "operating_cash_flow","capital_expenditure_outflow","free_cash_flow_to_equity",
+                "cash_and_cash_equivalents","total_debt","annualised_ebitda",
             )
         missing = tuple(metric for metric in required if metrics.get(metric) is None)
         completeness = D(len(required)-len(missing))/D(len(required))
@@ -307,8 +318,18 @@ def build_company_fundamentals(
     growths=[v for v in (m.get("revenue_growth_yoy"),m.get("pat_growth_yoy")) if v is not None]
     growth=_clip(D("50")+sum(growths,ZERO)/D(len(growths))*D("150")) if growths else None
     if bank_like:
-        roe = m.get("return_on_equity")
+        latest_roe = m.get("return_on_equity")
+        annual_roe_periods = [p for p in annual if p.metrics.get("return_on_equity") is not None]
+        fallback_roe_period = annual_roe_periods[-1] if annual_roe_periods else None
+        roe = latest_roe if latest_roe is not None else (
+            fallback_roe_period.metrics.get("return_on_equity") if fallback_roe_period else None
+        )
         profitability = _clip(D("50") + roe * D("200")) if roe is not None else None
+        if latest_roe is None and fallback_roe_period is not None:
+            notes.append(
+                "Latest interim ROE unavailable because a matching prior-year balance sheet is missing; "
+                f"the profitability proxy uses annual ROE through {fallback_roe_period.period_end.isoformat()}."
+            )
         # Only a disclosed equity/assets proxy and the loans/deposits ratio are
         # used here. Regulatory CET1/CRAR and NPA ratios remain explicit gaps.
         balance_parts=[]
@@ -331,8 +352,11 @@ def build_company_fundamentals(
         if m.get("equity_to_assets") is not None: balance_parts.append(_clip(m["equity_to_assets"]*D("100")))
         balance=sum(balance_parts,ZERO)/D(len(balance_parts)) if balance_parts else None
     if len(annual)<3: notes.append("Fewer than three annual periods: normalised cycle confidence is limited.")
-    if m.get("return_on_equity") is None: notes.append("ROE unavailable: prior-year balance-sheet equity is missing.")
-    if not bank_like and m.get("free_cash_flow_to_equity_proxy") is None: notes.append("FCF unavailable: operating cash flow or capex is missing.")
+    annual_roe_available = any(p.metrics.get("return_on_equity") is not None for p in annual)
+    if m.get("return_on_equity") is None and not annual_roe_available:
+        notes.append("ROE unavailable: prior-year balance-sheet equity is missing in both latest and annual periods.")
+    if not bank_like and m.get("free_cash_flow_to_equity") is None:
+        notes.append("True FCFE unavailable: CFO, capex and current/prior-year debt balances are all required; proxy-only cash flow is not used for DCF.")
     if m.get("total_equity_derivation") not in (None, "reported_equity"):
         notes.append(f"Book equity is a derived accounting residual ({m.get('total_equity_derivation')}); verify before using book-value multiples.")
     notes.append("Automated financial scores are not a governance, management or qualitative thesis assessment.")

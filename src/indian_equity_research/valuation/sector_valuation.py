@@ -155,9 +155,16 @@ def value_universe(
             else:
                 warnings.append("Bank valuation requires at least one valid annual ROE observation and current book value per share.")
         else:
-            fcfs=[v for v in _annual(company,"free_cash_flow_to_equity_proxy") if v>0]
-            if len(fcfs)>=2 and shares is not None and shares>0:
-                normalised=_median(fcfs[-3:])
+            # Require three consecutive annual periods with calculated FCFE.
+            # CFO minus capex without net borrowing is deliberately excluded.
+            latest_three = company.annual_periods[-3:]
+            fcfs = [p.metrics.get("free_cash_flow_to_equity") for p in latest_three]
+            fcfe_history_valid = (
+                len(latest_three) == 3
+                and all(value is not None and value > 0 for value in fcfs)
+            )
+            if fcfe_history_valid and shares is not None and shares>0:
+                normalised=_median([value for value in fcfs if value is not None])
                 sc=[]
                 for g,coe,tg in [
                     (assumptions.bear_growth,assumptions.bear_cost_of_equity,assumptions.bear_terminal_growth),
@@ -169,7 +176,10 @@ def value_universe(
                     dcf_values=[v for v in sc if v is not None]
                     checks["dcf_base"]=dcf_values[1]
             else:
-                warnings.append("DCF requires two or more positive annual CFO-minus-capex observations.")
+                warnings.append(
+                    "FCFE DCF requires three consecutive positive annual FCFE observations calculated as "
+                    "CFO minus capex plus net borrowing; proxy-only cash flows are not discounted."
+                )
             if sector.casefold() == "financial services":
                 peers=[]
                 warnings.append("Financial Services contains materially different business models in this universe; cross-peer P/E and EV/EBITDA comparisons are disabled without a sub-sector peer map.")

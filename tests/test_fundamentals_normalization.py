@@ -132,3 +132,19 @@ def test_same_date_instant_snapshots_merge_facts_across_filings():
  assert current.metrics["total_equity"]==D("500")
  assert current.metrics["return_on_equity"]==D("90")/D("450")
  assert current.metrics["bank_deposit_growth_yoy"]==D("3200")/D("2600")-D("1")
+
+
+def test_bank_uses_annual_roe_when_latest_interim_cannot_calculate_roe():
+ rows=fixture()
+ # Latest interim statement has no comparable snapshot from a year earlier.
+ for metric,value in [("total_assets",700),("total_equity",350),("borrowings",130)]:
+  add(rows,metric,value,"2026-09-30","2026-09-30","instant")
+ for metric,value in [("total_income",35),("profit_before_tax",10),("profit_after_tax_total",8),("net_interest_income",12)]:
+  add(rows,metric,value,"2026-07-01","2026-09-30","quarter")
+ periods=normalize_financial_observations(rows)
+ interim=next(p for p in periods if p.period_end==date(2026,9,30) and p.period_kind=="quarter")
+ assert interim.metrics["return_on_equity"] is None
+ company=build_company_fundamentals(periods,symbol="TEST",sector="Banking")
+ assert company.profitability_score is not None
+ assert any("profitability proxy uses annual ROE" in note for note in company.notes)
+ assert not any("ROE unavailable:" in note for note in company.notes)

@@ -407,3 +407,15 @@ The latest integrated Wealth Scan run (43577777470) successfully generated 64 co
 **Tests:** Python compilation passed; 33 focused tests passed across normalization, valuation, bank taxonomy aliases, valuation screening, XBRL context selection and CSV ingestion.
 
 **Next required operation:** one new full-64 financial import is necessary to populate the corrected instant bank facts and BorrowingsNoncurrent in the run database. The previous 11,887-observation artifact remains preserved; it must not be overwritten. Then rerun WEALTH SCAN against the new database and inspect the bank valuations and debt/leverage changes.
+
+
+### FCFE and bank ROE methodology correction — 15 November 2026
+
+The valuation audit identified a material distinction that must remain visible in both code and reports:
+
+- CFO minus capital expenditure is a **levered free-cash-flow proxy**, not full FCFE. The proxy is retained as a diagnostic metric but is no longer an input to the equity DCF.
+- True FCFE is calculated only when current and comparable prior-year debt balances are available: CFO − capex + (closing debt − prior-year debt). Missing debt comparatives leave FCFE unavailable; they are never treated as zero.
+- Non-bank FCFE DCF now requires three consecutive positive annual FCFE observations. With only two annual periods, the system must withhold DCF fair value rather than extrapolate a thin history. Sector-relative multiples remain explicitly relative, not intrinsic value.
+- Where the latest bank interim period cannot calculate ROE because a matching prior-year balance sheet is unavailable, the financial profitability proxy may fall back to the latest available annual ROE and must state the annual period used. It must not claim that ROE is wholly unavailable when annual evidence exists.
+
+**Acceptance still required:** focused regression tests, full GitHub CI, a refreshed 64-company report, and inspection of the revised valuation-method counts and held-stock outputs. This code correction does not by itself complete company quality, governance, bank credit-risk or portfolio-reconciliation research.

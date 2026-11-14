@@ -33,7 +33,7 @@ def test_nonbank_dcf_and_peer_multiples_use_peer_universe():
  for symbol,cap,price,fcf,pat,ebitda,netdebt in [
   ("A",10000,100,300,400,500,100),("B",12000,120,350,450,550,150),
   ("C",14000,140,380,480,600,200),("D",16000,160,420,520,650,250)]:
-  annual=[period(symbol,y,{"free_cash_flow_to_equity_proxy":D(fcf),"profit_after_tax":D(pat),"annualised_ebitda":D(ebitda),"net_debt":D(netdebt),"total_equity":D("1000")}) for y in ["2024-03-31","2025-03-31","2026-03-31"]]
+  annual=[period(symbol,y,{"free_cash_flow_to_equity":D(fcf),"profit_after_tax":D(pat),"annualised_ebitda":D(ebitda),"net_debt":D(netdebt),"total_equity":D("1000")}) for y in ["2024-03-31","2025-03-31","2026-03-31"]]
   companies[symbol]=company(symbol,"IT Services",annual)
   market[symbol]={"price_inr":D(price),"market_cap_inr_crore":D(cap)}
  result=value_universe(companies,market,sectors)["A"]
@@ -52,7 +52,7 @@ def test_no_dcf_when_fcfe_history_missing():
 def test_missing_net_debt_blocks_ev_ebitda_multiple():
  companies={};market={};sectors={s:"Industrials" for s in ["A","B","C","D"]}
  for symbol,cap,price in [("A",1000,10),("B",1200,12),("C",1400,14),("D",1600,16)]:
-  annual=[period(symbol,y,{"free_cash_flow_to_equity_proxy":D("20"),"profit_after_tax":D("30"),"annualised_ebitda":D("40"),"net_debt":None,"total_equity":D("100")}) for y in ["2024-03-31","2025-03-31","2026-03-31"]]
+  annual=[period(symbol,y,{"free_cash_flow_to_equity":D("20"),"profit_after_tax":D("30"),"annualised_ebitda":D("40"),"net_debt":None,"total_equity":D("100")}) for y in ["2024-03-31","2025-03-31","2026-03-31"]]
   companies[symbol]=company(symbol,"Industrials",annual);market[symbol]={"price_inr":D(price),"market_cap_inr_crore":D(cap)}
  result=value_universe(companies,market,sectors)
  assert all(v.cross_checks["peer_ev_ebitda"] is None for v in result.values())
@@ -81,7 +81,7 @@ def test_financial_services_peer_multiples_disabled_without_subsector_map():
     symbols=["HDFCAMC","CAMS","CDSL","BSE"]
     for index,symbol in enumerate(symbols,1):
         annual=[period(symbol,y,{
-            "free_cash_flow_to_equity_proxy":D(str(50+index)),
+            "free_cash_flow_to_equity":D(str(50+index)),
             "profit_after_tax":D(str(60+index)),
             "annualised_ebitda":D(str(70+index)),
             "net_debt":D("0"),
@@ -138,3 +138,13 @@ def test_bank_valuation_is_provisional_with_one_annual_roe_only():
     assert v.fair_value_base is not None
     assert any("only one valid annual ROE" in w for w in v.warnings)
     assert v.confidence < D(".70")
+
+
+def test_proxy_only_cash_flow_does_not_qualify_for_fcfe_dcf():
+ annual=[period("X",end,{"levered_free_cash_flow_proxy":D("100"),"profit_after_tax":D("10")})
+          for end in ["2024-03-31","2025-03-31","2026-03-31"]]
+ result=value_universe({"X":company("X","Industrials",annual)},
+                       {"X":{"price_inr":D("10"),"market_cap_inr_crore":D("100")}},
+                       {"X":"Industrials"})["X"]
+ assert result.fair_value_base is None
+ assert any("proxy-only cash flows are not discounted" in warning for warning in result.warnings)

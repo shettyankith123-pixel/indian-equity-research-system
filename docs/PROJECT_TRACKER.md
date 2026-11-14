@@ -1,98 +1,103 @@
-# Project execution tracker — Indian Equity Research System
+# Indian Equity Research System — Project Tracker
 
 Last checkpoint: 2026-11-15 (Asia/Dubai)
 Repository: https://github.com/shettyankith123-pixel/indian-equity-research-system
-Default branch: main
-Baseline commit reviewed: a8777a5804a6e07d83ce48fea18024ec7334d482
+Branch: main
+Current reviewed commit: 7bfa4aaed024ec5d612db963b2457a3210cda9a5
 
 ## Operating agreement
+- Work in milestones and deliver investor-facing outputs, not endless code churn.
+- Every user update must show the overall completion percentage, concrete change since the prior checkpoint, pending work and next milestone.
+- Percentage measures the usable end-to-end product, not code volume, tests passed or commits.
+- Save meaningful checkpoints here. A new chat should read this file first and continue from the saved run IDs and artifacts without asking the user to repeat context.
+- Avoid repeated work: use one current ingestion run, retain/download artifacts once, deduplicate source filings, cache by stable source/reference/content hash, use focused tests while editing and run the full suite at integration checkpoints.
+- No fabricated financial facts, management/governance conclusions, quality scores, fair values or investment calls. Material claims need source, source date and research date.
+- Keep BUY/ACCUMULATE gates strict. Missing evidence remains visible as ASSESS/OBSERVE/WAIT as appropriate.
+- User mandate: moderate-to-high risk tolerance, 7–10-year horizon, long-term wealth creation; actively seek opportunities and stage entries without manufacturing BUY calls.
+- Work here is synchronous. Do not promise background execution or later delivery.
 
-- The user wants milestone-led execution, not repeated planning or code-only progress.
-- Every progress update must include one overall completion percentage, what changed since the last checkpoint, what remains, and the next milestone.
-- The percentage measures investor-facing product capability, not code volume, number of commits, or green CI runs.
-- Save each meaningful milestone to this repository. A new chat must resume from this file and the linked artifacts rather than asking the user to repeat context.
-- Avoid repeated work: cache downloaded filings, key them by stable source/reference and content hash, deduplicate observations, run focused tests during development, and run the full suite at integration checkpoints.
-- Do not invent financial facts, company-quality scores, fair values, management assessments, governance conclusions, or BUY recommendations. Every material claim needs a source and date.
-- Preserve the BUY/ACCUMULATE evidence gates. Missing or low-confidence evidence must remain explicit (ASSESS/OBSERVE/WAIT as appropriate).
-- Do not describe a workflow as financially complete merely because GitHub Actions passed.
-- User mandate: moderate-to-high risk tolerance, 7–10 year horizon, long-term wealth creation; seek attractive opportunities and allow staged entry without manufacturing BUY calls.
-- Work in this chat is synchronous only. No background execution or future delivery is available. Continue as far as tools permit in each active session and commit verified checkpoints.
+## Overall completion
+<current_score>34%</current_score>
 
-## Completion measure
+The score stays at 34% until actual 64-company financial coverage and FCFE results are produced. Code implementation, green CI and workflow setup alone do not increase the investor-facing completion percentage.
 
-Overall progress is weighted by the usable end-to-end product, with these fixed weights (100 total):
-
-| Workstream | Weight | Evidence required for full credit |
+### Fixed weights (100 total)
+| Workstream | Weight | Evidence needed for full credit |
 |---|---:|---|
-| Platform, 64-stock universe, market-price and portfolio foundation | 15% | Reproducible repository, CI, 64-stock universe, timestamped market data, clear portfolio-import boundaries |
-| Annual/quarterly financial history and FCFE quality | 20% | Pagination handled; source-attributed periods reconciled; coverage report for all 64; three consecutive verified FCFE years wherever applicable; explicit sector-specific exceptions |
-| Company-quality, management, governance and thesis research | 20% | Evidence-backed, sector-aware assessments with source/date, risk flags, thesis, counter-thesis and invalidation conditions; no inferred scores presented as facts |
-| Sector valuation and decision engine | 15% | Appropriate valuation methods, bear/base/bull scenarios, fair-value ranges, entry levels, confidence and tested BUY/ACCUMULATE/HOLD/WAIT/ASSESS/OBSERVE/REDUCE/EXIT/AVOID rules |
-| Investor-facing Wealth Scan and portfolio action plan | 10% | Full 64-stock decision register, existing-holding distinction, actionable reasons/triggers, allocation only with current capital/holdings data |
-| Opportunity discovery, news/IPO/sector intelligence | 10% | Outside-watchlist candidates and IPO coverage with evidence and a tested company/news relevance workflow |
-| Research memory, impact validation and operational reliability | 10% | Original calls retained; T+1/T+3/T+5/T+10/T+20 outcome evaluation; benchmarks; reproducible scheduled data refresh and clear freshness status |
+| Platform, 64-stock universe, market-price and portfolio foundation | 15% | Reproducible repo, 64-stock universe, timestamped market data, clear portfolio-import boundaries |
+| Annual/quarterly financial history and FCFE quality | 20% | Pagination, reconciled source-attributed periods, coverage matrix for all 64, three consecutive verified FCFE years where applicable, sector exceptions |
+| Company quality, management, governance and thesis research | 20% | Sector-aware evidence-backed assessments with sources/dates, risks, counter-evidence and invalidation conditions |
+| Sector valuation and decision engine | 15% | Appropriate sector models, bear/base/bull scenarios, fair-value and entry ranges, confidence and tested decision gates |
+| Investor-facing Wealth Scan and portfolio action plan | 10% | Full 64-stock register, holding-vs-new-buyer distinctions, triggers and allocation only with current holdings/cash |
+| Opportunity discovery, news/IPO/sector intelligence | 10% | Evidence-based outside-watchlist opportunities, IPO coverage and tested news/company mapping |
+| Research memory, impact validation and reliability | 10% | Saved original calls; T+1/T+3/T+5/T+10/T+20 outcome checks; benchmark comparison and reliable refresh/freshness |
 
-### Baseline score at this checkpoint: 34% complete
-
-| Workstream | Earned | Reason |
+### Baseline breakdown — still the current score
+| Workstream | Earned | Current evidence |
 |---|---:|---|
-| Platform and data foundation | 15/15 | Repository, 64-stock universe, quote snapshots, market-data ingestion, CLI/SQLite foundation and CI exist |
-| Financial history and FCFE | 4/20 | NSE/XBRL importer and true-FCFE calculation logic exist; filing pagination and full-universe verified multi-year coverage are not yet proven |
-| Company-quality and governance | 1/20 | Decision inputs/gates exist, but management, governance and qualitative thesis evidence are not populated as a repeatable assessment layer |
-| Valuation and decision engine | 7/15 | Sector valuation and deterministic decision rules exist; current generated register has no populated fair values or completed quality evidence |
-| Wealth Scan and portfolio action | 3/10 | A 64-row report/register is generated, but the latest inspected report classified all 64 as ASSESS |
-| Opportunity/news/IPO intelligence | 2/10 | Some framework, templates and event/news structures exist; full automatic intelligence flow is not complete |
-| Research memory and performance | 2/10 | Event-study and scheduled EOD foundation exist; longitudinal research-call scorecard is not complete |
-| **Total** | **34/100** | **The system is a functioning research foundation, not yet an investment-ready decision product.** |
+| Platform and data foundation | 15/15 | Repo, 64-stock universe, quote snapshots, market ingestion, CLI/SQLite foundation and CI |
+| Financial history and FCFE | 4/20 | Importer, true-FCFE formula and pagination implementation exist; full-universe annual/FCFE coverage not yet proven |
+| Company quality and governance | 1/20 | Decision gates exist; repeatable management/governance/thesis evidence layer is not populated |
+| Valuation and decision engine | 7/15 | Sector valuation and deterministic decision rules exist; no completed fair values in the inspected Wealth Scan |
+| Wealth Scan and portfolio action | 3/10 | 64-row report/register exists, but inspected report has 64 ASSESS |
+| Opportunity/news/IPO intelligence | 2/10 | Templates/framework and event/news structures exist; complete automated workflow is not built |
+| Research memory/performance | 2/10 | Event-study and EOD foundation exist; longitudinal call scorecard not complete |
+| **Total** | **34/100** | **Functioning research foundation, not yet an investment-ready decision product** |
 
-This is a conservative, evidence-based engineering estimate, not a claim that 34% of the eventual investment outcome is already achieved. Percentages rise only when acceptance criteria are demonstrated in source data and generated outputs.
+## What was verified before this development session
+- Latest baseline code commit inspected: `a8777a5804a6e07d83ce48fea18024ec7334d482`.
+- The checked-in Wealth Scan report and decision register contained 64 stocks, 64 prices, zero base fair values and 64 ASSESS decisions. This is a data-readiness report, not an investment decision report.
+- A prior full NSE ingestion (run 43645167461) produced 12,807 normalized financial observations; 63 companies returned filings, 62 had annual filings, one had a transition-period filing and one had no NSE filing records. It recorded exceptions including LT, Siemens, CGPOWER and MCX.
+- In that old import, most issuers had only two consolidated annual periods. It is not evidence that the page-1-limited importer provided three-year annual coverage.
+- The repository documentation says no direct authorized INDmoney API credential is configured in GitHub Actions, no hosted persistent database is configured, and no external LLM/news model is connected. Use supported exports and connected tools; do not assume those integrations exist.
 
-## Milestones and acceptance criteria
+## M1 — Historical financial coverage: implementation status
 
-### M1 — Reliable historical financial coverage (next)
-Deliverables:
-1. Fix NSE filing pagination without silently stopping at the first page; handle API pagination metadata and a safe termination condition.
-2. Deduplicate filing rows/revisions and preserve the latest valid filing for each period/basis.
-3. Verify annual periods across the configured 64 symbols; distinguish consolidated/standalone and transition years.
-4. Validate three consecutive years of true FCFE where applicable. CFO minus capex alone is not FCFE; net borrowing requires supported current and prior debt balances. For financial institutions where FCFE DCF is not suitable, record the sector-specific alternative instead of forcing DCF.
-5. Produce a machine-readable and human-readable coverage matrix: years available, FCFE years verified, missing facts, source links, conflicts, and exception reasons.
-Acceptance: tests cover multi-page responses, duplicate/revised filings, empty/short final page, invalid pagination metadata, and annual/FCFE gaps; a 64-company coverage report is generated from the actual run.
+### Completed and committed
+1. **NSE filing pagination** — the importer now fetches every available page using the NSE `totalCount` and page-size metadata; validates the NSE zero-based response page against one-based request parameters; de-duplicates repeated filing rows; keeps the latest revision; fails rather than silently truncating when the expected final page is missing; uses a safe maximum page count.
+   - Code commit: `c753bf8493d0d60cf60349a6e952435befa04254`
+   - Main files: `src/indian_equity_research/ingestion/nse_filing_client.py`, `tests/test_nse_filing_client.py`
+   - A first implementation failed live because NSE response `page` is zero-based. The convention is now explicitly handled and covered by regression tests.
+2. **True-FCFE annual audit** — added a reusable audit tool that mirrors the fundamentals normalizer: true FCFE = CFO - abs(capex) + (current closing debt - prior-year closing debt). Current debt must be from the same XBRL filing reference as annual cash flows; prior debt must come from the same basis/source 330–400 days before year-end. Missing inputs are not imputed as zero. Banks are routed to bank-specific valuation rather than a generic FCFE DCF.
+   - Commit: `ac086ae056f637209515bdec26e554ce416b4ae6`
+   - Files: `scripts/build_financial_coverage_report.py`, `tests/test_financial_coverage_report.py`
+   - Outputs: `company_financial_coverage.csv`, `annual_fcfe_audit.csv`, `financial_coverage_summary.json`, `financial_coverage.md`
+3. **Test import correction** — the audit tests load the standalone script explicitly by path; they no longer assume `scripts` is an installed Python package.
+   - Commit: `4096a99f802feaba4364a25b31f964ba5e4c591a`
+4. **Automatic coverage report in future imports** — the NSE financial ingestion workflow now runs the FCFE audit after raw financial normalization and includes the reports in the same uploaded artifact.
+   - Commit: `7bfa4aaed024ec5d612db963b2457a3210cda9a5`
+   - Workflow: `.github/workflows/nse-financials-ingest.yml`
 
-### M2 — Company-quality and qualitative research
-Deliverables:
-1. Use sector-aware scorecards (banks, IT, consumer, industrials, commodities, utilities, healthcare, capital-market infrastructure, etc.).
-2. Assess business model, competitive position, management execution/capital allocation, governance/compliance, promoter/shareholding and material risks where relevant.
-3. Store every assessment with evidence URL, source publication date, research date, confidence, analyst rationale, counter-evidence and review trigger.
-4. Keep missing evidence explicitly unassessed; an LLM may summarize evidence but may not invent facts or self-certify a high score.
-Acceptance: each of the 64 has a research status; scored companies have evidence-backed assessments and the decision engine blocks BUY/ACCUMULATE without required evidence.
+### Verified CI
+- Pagination/test fix passed: https://github.com/shettyankith123-pixel/indian-equity-research-system/actions/runs/43652159517
+- FCFE audit test import correction passed: https://github.com/shettyankith123-pixel/indian-equity-research-system/actions/runs/43652641200
+- Automated workflow integration commit passed unit tests: https://github.com/shettyankith123-pixel/indian-equity-research-system/actions/runs/43652859072
 
-### M3 — Valuation and decisions
-Deliverables: sector-appropriate valuation; bear/base/bull values; assumptions and sensitivity; historical/peer context; margin of safety; entry zones; downside/risk; confidence; conditions that change the decision.
-Acceptance: all 64 have either a defensible valuation and decision or a precise ASSESS/OBSERVE reason and next evidence needed. The output must not be 64 generic ASSESS labels.
+These prove unit tests and workflow syntax/configuration checks pass. They do not prove actual 64-stock annual/FCFE coverage.
 
-### M4 — Wealth Scan release
-Deliverables: investor-facing summary; 64-stock decision register; current holdings review; buy/accumulate shortlist; WAIT price triggers; risk/concentration review; capital allocation only from a current portfolio/cash snapshot; outside-watchlist opportunities; prior-scan comparison.
-Acceptance: output is reproducible, dated, source-linked and useful without reading the code.
+### The one current full-universe import — do not duplicate
+- Run ID: `43652209994`
+- URL: https://github.com/shettyankith123-pixel/indian-equity-research-system/actions/runs/43652209994
+- Branch: main; code SHA: `c753bf8493d0d60cf60349a6e952435befa04254`
+- Parameters: all 64 symbols; 4 quarterly periods and 3 annual periods per reporting basis.
+- Last verified status: `in_progress`, job `ingest-financials`; the financial-fetch/normalization step was still running.
+- This run started before the FCFE audit workflow step was committed. Its artifact will contain the normalized CSV and filing coverage but not the new FCFE report; run the audit script once manually against its artifact after it completes.
+- Do not dispatch another full import unless this run fails or the artifact is corrupt/missing. Do not re-run the whole import merely to attach the audit step.
+- After the artifact is downloaded, analyze the real files and save the reports/checkpoint. Future scheduled/manual imports will include the audit automatically.
 
-### M5 — Broader intelligence and learning
-Deliverables: global/Indian news and filings, sector events, IPO screening, outside-watchlist discovery, stock/event mapping, outcome tracking and benchmark comparison.
-Acceptance: forecasts and thesis changes are saved before outcomes; subsequent results are measured at defined horizons; accuracy is reported rather than asserted.
-
-## Current verified state at baseline
-
-- Latest reviewed code commit: a8777a5804a6e07d83ce48fea18024ec7334d482.
-- Repository is private; authenticated GitHub access has admin/push permission.
-- The following workflow runs were completed successfully on that commit:
-  - Research Command: https://github.com/shettyankith123-pixel/indian-equity-research-system/actions/runs/43646937732
-  - NSE Financial Ingestion: https://github.com/shettyankith123-pixel/indian-equity-research-system/actions/runs/43645167461
-  - Tests: https://github.com/shettyankith123-pixel/indian-equity-research-system/actions/runs/43645087190
-- These green runs prove execution/tests passed, not that the 64-stock history is complete or investment decisions are validated.
-- Latest inspected committed report: reports/wealth-scan/wealth_scan.md and reports/wealth-scan/decision_register.csv; it contains 64/64 ASSESS, 64 prices, and no base fair values. It is a data-readiness report, not a completed investment recommendation set.
-- Code review found the importer calls fetch_integrated_filing_listing(... page=1 ...) and only processes that response's data list. The listing helper accepts a page parameter but the importer does not iterate later pages.
-- True FCFE logic exists in fundamentals.py as CFO less capex plus net borrowing, and requires current/prior-year debt observations; three-year consecutive coverage still needs to be demonstrated.
-- Decision engine already requires financial, quality, governance, valuation-confidence, completeness and source inputs; the generated report lacks those inputs.
-- docs/implementation_status.md notes there is no direct authenticated INDmoney API integration in GitHub Actions, no hosted persistent database, and no external LLM/news model integration. Use supported exports/tools and make these boundaries visible.
+## M1 acceptance criteria still outstanding
+1. Confirm the current run finishes successfully and upload artifact exists.
+2. Produce a coverage matrix for all configured 64 symbols: annual dates, consolidated/standalone, transition periods, filing refs, conflicts and exact errors.
+3. Calculate strict true-FCFE for each annual period and verify three consecutive years wherever applicable. Record missing CFO/capex/current debt/prior debt facts separately.
+4. Route banks/financial institutions to sector-appropriate valuation, with explicit reasons.
+5. Commit the human-readable report, machine-readable CSV/JSON and updated tracker.
+6. Only then increase the financial-history workstream score and overall percentage.
 
 ## Next action
+Poll run `43652209994`. When it succeeds, download its artifact once, execute `scripts/build_financial_coverage_report.py` once against the artifact CSVs, inspect the results for schema/calculation errors, commit the coverage report and checkpoint, and update the total percentage only after the M1 acceptance criteria are met.
 
-Execute M1 in the existing architecture: inspect the actual NSE response pagination contract and existing tests; implement robust page retrieval plus tests; run focused tests, then full CI; run the 64-stock importer once and evaluate actual annual/FCFE coverage; commit the code, test results, data coverage report and updated progress score. Do not spend time on a dashboard or unrelated features before this deliverable exists.
+## Remaining milestones
+- **M2 — Company-quality research:** evidence-backed sector-aware business, competitive, management/capital allocation, governance/compliance and qualitative thesis assessments. Every assessment stores source URL, publication date, research date, confidence, counter-evidence and review/invalidation trigger. Missing evidence stays unassessed; an LLM may summarize sources but may not invent facts or self-certify high scores.
+- **M3 — Valuation and decision engine:** sector-specific valuation, scenarios, sensitivity, fair value and entries; every stock receives a defensible decision or a specific missing-evidence status.
+- **M4 — Investor-facing Wealth Scan:** full 64-stock decisions, actual holdings distinctions, best current opportunities, wait triggers, risk and concentration review, capital plan only with current cash/holding data, outside-watchlist ideas and comparison to prior scan.
+- **M5 — Broader intelligence and learning:** global/Indian news, sector developments, IPOs, outside-watchlist discovery and research-outcome tracking against relevant market/sector benchmarks.

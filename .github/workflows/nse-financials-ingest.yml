@@ -43,7 +43,20 @@ jobs:
         run: |
           ARGS=()
           if [ -n "$SYMBOLS" ]; then ARGS+=(--symbols "$SYMBOLS"); fi
-          python scripts/ingest_nse_integrated_filings.py             --quarter-count "$QUARTER_COUNT"             --annual-count "$ANNUAL_COUNT"             --delay-seconds 0.35             --run-id "github-${GITHUB_RUN_ID}"             "${ARGS[@]}"
+          python scripts/ingest_nse_integrated_filings.py \
+            --quarter-count "$QUARTER_COUNT" \
+            --annual-count "$ANNUAL_COUNT" \
+            --delay-seconds 0.35 \
+            --run-id "github-${GITHUB_RUN_ID}" \
+            "${ARGS[@]}"
+      - name: Audit annual history and strict true-FCFE coverage
+        run: |
+          RUN_DIR="data/financials/runs/github-${GITHUB_RUN_ID}"
+          python scripts/build_financial_coverage_report.py \
+            --observations "$RUN_DIR/financial_observations.csv" \
+            --filing-coverage "$RUN_DIR/filing_coverage.csv" \
+            --output-dir "$RUN_DIR" \
+            --run-id "github-${GITHUB_RUN_ID}"
       - name: Import verified MCX BSE source observations
         run: |
           ies import-financials data/imports/mcx_bse_q2_fy27_observations.csv --db "data/financials/runs/github-${GITHUB_RUN_ID}/financials.sqlite"

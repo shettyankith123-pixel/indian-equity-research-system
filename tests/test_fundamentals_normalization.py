@@ -7,7 +7,9 @@ from indian_equity_research.analytics.fundamentals import normalize_financial_ob
 def add(rows,metric,value,start,end,kind,reference="ref"):
  period=FinancialPeriod(date.fromisoformat(start),date.fromisoformat(end),kind,"consolidated",D("1"))
  source=SourceReference("NSE","exchange_filing",date.fromisoformat(end),datetime(2026,11,14,tzinfo=timezone.utc),"https://example.com/xbrl",reference)
- rows.append(FinancialObservation("TEST",metric,D(str(value)),"INR crore","INR",period,source))
+ unit="ratio" if metric in {"gross_npa_ratio","net_npa_ratio","cet1_ratio","additional_tier1_ratio"} else "INR crore"
+ currency="N/A" if unit == "ratio" else "INR"
+ rows.append(FinancialObservation("TEST",metric,D(str(value)),unit,currency,period,source))
 
 
 def fixture():
@@ -150,3 +152,32 @@ def test_bank_uses_annual_roe_when_latest_interim_cannot_calculate_roe():
  assert company.profitability_score is not None
  assert any("profitability proxy uses annual ROE" in note for note in company.notes)
  assert not any("ROE unavailable:" in note for note in company.notes)
+
+
+def test_bank_risk_metrics_reported_in_duration_context_reach_latest_fundamentals():
+ rows=[]
+ for metric,value in [
+  ("total_assets",5200),("bank_share_capital",40),("bank_reserves_and_surplus",460),
+  ("bank_deposits",3200),("bank_advances",2900),("cash_and_cash_equivalents",220),
+ ]:
+  add(rows,metric,value,"2026-09-30","2026-09-30","instant")
+ for metric,value in [
+  ("total_income",125),("profit_before_tax",38),("profit_after_tax_total",30),
+  ("net_interest_income",48),("gross_npa_reported",23577.02),("net_npa_reported",5706.22),
+  ("gross_npa_ratio",0.012),("net_npa_ratio",0.003),("cet1_ratio",0.1601),
+  ("additional_tier1_ratio",0.0),
+ ]:
+  add(rows,metric,value,"2026-07-01","2026-09-30","quarter")
+ periods=normalize_financial_observations(rows)
+ company=build_company_fundamentals(periods,symbol="TEST",sector="Banking")
+ latest=company.latest_period
+ assert latest is not None
+ assert latest.metrics["gross_npa"]==D("23577.02")
+ assert latest.metrics["net_npa"]==D("5706.22")
+ assert latest.metrics["gross_npa_ratio"]==D("0.012")
+ assert latest.metrics["net_npa_ratio"]==D("0.003")
+ assert latest.metrics["cet1_ratio"]==D("0.1601")
+ assert company.data_completeness==D("1")
+ assert any("GNPA 1.20%, NNPA 0.30%" in note for note in company.notes)
+ assert any("CET1 ratio: 16.01%" in note for note in company.notes)
+ assert any("Provision coverage/PCR is not mapped" in note for note in company.notes)

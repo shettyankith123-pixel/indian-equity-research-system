@@ -244,8 +244,12 @@ def normalize_financial_observations(observations: Iterable[FinancialObservation
             "bank_advances_to_deposits": safe_div(instant.get("bank_advances"), instant.get("bank_deposits")),
             "bank_deposit_growth_yoy": deposit_growth_yoy,
             "bank_advances_growth_yoy": advance_growth_yoy,
-            "gross_npa": instant.get("gross_npa"),
-            "net_npa": instant.get("net_npa"),
+            "gross_npa": flow.get("gross_npa_reported") if flow.get("gross_npa_reported") is not None else instant.get("gross_npa"),
+            "net_npa": flow.get("net_npa_reported") if flow.get("net_npa_reported") is not None else instant.get("net_npa"),
+            "gross_npa_ratio": flow.get("gross_npa_ratio"),
+            "net_npa_ratio": flow.get("net_npa_ratio"),
+            "cet1_ratio": flow.get("cet1_ratio"),
+            "additional_tier1_ratio": flow.get("additional_tier1_ratio"),
             "provisions_against_npa": instant.get("provisions_against_npa"),
             "risk_weighted_assets": instant.get("risk_weighted_assets"),
         }
@@ -330,8 +334,8 @@ def build_company_fundamentals(
                 "Latest interim ROE unavailable because a matching prior-year balance sheet is missing; "
                 f"the profitability proxy uses annual ROE through {fallback_roe_period.period_end.isoformat()}."
             )
-        # Only a disclosed equity/assets proxy and the loans/deposits ratio are
-        # used here. Regulatory CET1/CRAR and NPA ratios remain explicit gaps.
+        # Credit-quality and regulatory-capital fields are surfaced for review;
+        # they are not yet converted into an automated bank-quality score.
         balance_parts=[]
         if m.get("equity_to_assets") is not None:
             balance_parts.append(_clip(m["equity_to_assets"] / D("0.15") * D("100")))
@@ -339,10 +343,25 @@ def build_company_fundamentals(
             ldr=m["bank_advances_to_deposits"]
             balance_parts.append(_clip(D("100") - abs(ldr-D("0.85"))*D("180")))
         balance=sum(balance_parts,ZERO)/D(len(balance_parts)) if balance_parts else None
-        if m.get("gross_npa") is None or m.get("net_npa") is None:
-            notes.append("Bank asset-quality review is incomplete: gross/net NPA and provision coverage are not mapped.")
+        npa_fields=(m.get("gross_npa"),m.get("net_npa"),m.get("gross_npa_ratio"),m.get("net_npa_ratio"))
+        if any(value is None for value in npa_fields):
+            notes.append("Bank asset-quality evidence is incomplete: one or more reported GNPA/NNPA amounts or ratios are missing.")
+        elif latest is not None:
+            notes.append(
+                f"Latest reported bank asset quality ({basis}, {latest.period_end.isoformat()}): "
+                f"GNPA {m['gross_npa_ratio']*D('100'):.2f}%, NNPA {m['net_npa_ratio']*D('100'):.2f}%."
+            )
+        if m.get("cet1_ratio") is not None and latest is not None:
+            notes.append(
+                f"Reported CET1 ratio: {m['cet1_ratio']*D('100'):.2f}% "
+                f"({basis}, {latest.period_end.isoformat()}); this is a directly reported ratio."
+            )
+        else:
+            notes.append("CET1 ratio is not available in the selected bank filing context.")
+        if m.get("provisions_against_npa") is None:
+            notes.append("Provision coverage/PCR is not mapped; generic provisions are not treated as NPA coverage.")
         if m.get("risk_weighted_assets") is None:
-            notes.append("Regulatory CRAR/CET1 cannot be calculated because risk-weighted assets are not mapped.")
+            notes.append("CRAR is not calculated: risk-weighted assets and total regulatory capital are not both mapped.")
     else:
         margins=[v for v in (m.get("ebitda_margin"),m.get("pat_margin")) if v is not None]
         profitability=_clip(D("50")+sum(margins,ZERO)/D(len(margins))*D("200")) if margins else None
@@ -363,6 +382,8 @@ def build_company_fundamentals(
     bank_like = "bank" in sector.casefold() or m.get("net_interest_income") is not None
     if bank_like:
         bank_required=("profit_after_tax","total_assets","total_equity","net_interest_income","bank_deposits","bank_advances")
+        if sector.casefold() == "banking":
+            bank_required += ("gross_npa","net_npa","gross_npa_ratio","net_npa_ratio","cet1_ratio")
         company_completeness = D(sum(1 for name in bank_required if m.get(name) is not None))/D(len(bank_required))
     else:
         company_completeness = latest.completeness

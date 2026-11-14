@@ -424,3 +424,10 @@ The valuation audit identified a material distinction that must remain visible i
 ### Relative valuation is context only — 15 November 2026
 
 The revised full-universe run had no issuer with three annual FCFE observations. It still showed large peer-multiple estimates as fair values (for example, the capital-goods and specialty-chemical groupings), which is not a sound basis for entry prices. The engine now retains per-share peer P/E and EV/EBITDA checks as comparison context but does not publish peer-only outputs in the intrinsic fair-value fields. Peer-only confidence is capped at 0.50. A justified P/B based on only one annual ROE observation is capped at 0.55. The report screen withholds upside, margin-of-safety and BUY/ACCUMULATE entry levels for peer-only values and all references below 0.65 confidence.
+
+
+### Bank asset-quality and capital fields — 15 November 2026
+
+Direct inspection of the current standalone NSE integrated bank filing XMLs confirmed that GNPA amount, NNPA amount, gross-NPA ratio, net-NPA ratio, CET1 ratio and Additional Tier 1 ratio are reported in quarter-duration contexts (for example OneD/FourD), not the exact-date instant contexts used for balance sheets. The importer now maps those exact taxonomy concepts from the selected quarter context, preserving ratio units as dimensionless values. The Banking sector now selects standalone financial statements for legal-entity bank quality and P/B work; consolidated remains preferred for other sectors.
+
+The system deliberately does not infer provision coverage from generic provisions, and does not calculate CRAR without RWA and total regulatory capital. NPA/CET1 facts are surfaced with source period and basis, not yet used as an automatic investment-quality score. Acceptance requires CI, a refreshed bank filing import and a 64-company Wealth Scan confirming the mapped fields and all decision gates remain intact.

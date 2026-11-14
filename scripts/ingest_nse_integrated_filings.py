@@ -53,6 +53,15 @@ METRIC_MAP: dict[str, tuple[tuple[str, ...], str]] = {
     "bank_provisions_and_contingencies": (("ProvisionsAndContingencies", "ProvisionAndContingencies"), "INR crore"),
     "net_cash_from_operating_activities": (("NetCashFlowsFromUsedInOperatingActivities", "NetCashFlowsFromOperatingActivities", "CashFlowsFromUsedInOperatingActivities"), "INR crore"),
     "capital_expenditure": (("PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities", "PurchaseOfPropertyPlantAndEquipment"), "INR crore"),
+    # Bank asset-quality and capital ratios are reported in NSE quarter-duration
+    # contexts (for example OneD/FourD), even though the values are period-end
+    # snapshots. They are handled as source-reported period-end metrics below.
+    "gross_npa_reported": (("GrossNonPerformingAssets",), "INR crore"),
+    "net_npa_reported": (("NonPerformingAssets",), "INR crore"),
+    "gross_npa_ratio": (("PercentageOfGrossNpa",), "ratio"),
+    "net_npa_ratio": (("PercentageOfNpa",), "ratio"),
+    "cet1_ratio": (("CET1Ratio",), "ratio"),
+    "additional_tier1_ratio": (("AdditionalTier1Ratio",), "ratio"),
 }
 
 
@@ -226,6 +235,9 @@ def extract_observations(
         if unit == "INR crore":
             value = raw / CRORE
             currency = "INR"
+        elif unit == "ratio":
+            value = raw
+            currency = "N/A"
         else:
             value = raw
             currency = "INR"
@@ -290,12 +302,13 @@ def extract_observations(
             if raw is None or tag is None:
                 continue
             value = raw / CRORE if unit == "INR crore" else raw
+            currency = "INR" if unit == "INR crore" else ("N/A" if unit == "ratio" else "INR")
             observations.append(FinancialObservation(
                 symbol=symbol,
                 metric=metric,
                 value=value,
                 unit=unit,
-                currency="INR",
+                currency=currency,
                 period=instant_period,
                 source=source,
                 observation_kind="reported",

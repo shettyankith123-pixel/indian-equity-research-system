@@ -10,6 +10,7 @@ _MODULE = importlib.util.module_from_spec(_SPEC)
 sys.modules[_SPEC.name] = _MODULE
 _SPEC.loader.exec_module(_MODULE)
 valuation_screen = _MODULE.valuation_screen
+preferred_reporting_basis = _MODULE.preferred_reporting_basis
 
 
 def test_valuation_screen_distinguishes_entry_zones_from_recommendations():
@@ -39,3 +40,9 @@ def test_low_confidence_intrinsic_reference_does_not_create_entry_zones():
     )
     assert provisional["valuation_signal"]=="LOW_CONFIDENCE_REFERENCE_ONLY"
     assert provisional["buy_entry_max"]==""
+
+
+def test_banking_research_prefers_standalone_and_other_sectors_keep_consolidated():
+    assert preferred_reporting_basis("Banking")=="standalone"
+    assert preferred_reporting_basis("Financial Services")=="consolidated"
+    assert preferred_reporting_basis("IT Services")=="consolidated"

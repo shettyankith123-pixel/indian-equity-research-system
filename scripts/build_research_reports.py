@@ -33,6 +33,11 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 
+def preferred_reporting_basis(sector: str) -> str:
+    """Use the legal-entity basis for banks; consolidated remains the default elsewhere."""
+    return "standalone" if sector.strip().casefold() == "banking" else "consolidated"
+
+
 def valuation_screen(
     price: Decimal | None,
     low: Decimal | None,
@@ -115,13 +120,16 @@ def main() -> int:
         instant_metric_symbols.setdefault(observation.metric,set()).add(observation.symbol)
     companies={}; basis_used={}
     for symbol,record in universe.items():
-        primary=build_company_fundamentals(normalized,symbol=symbol,sector=record.get("sector","Unclassified"),basis="consolidated")
+        sector=record.get("sector","Unclassified")
+        preferred_basis=preferred_reporting_basis(sector)
+        fallback_basis="consolidated" if preferred_basis == "standalone" else "standalone"
+        primary=build_company_fundamentals(normalized,symbol=symbol,sector=sector,basis=preferred_basis)
         if primary.latest_period:
-            companies[symbol]=primary;basis_used[symbol]="consolidated"
+            companies[symbol]=primary;basis_used[symbol]=preferred_basis
         else:
-            secondary=build_company_fundamentals(normalized,symbol=symbol,sector=record.get("sector","Unclassified"),basis="standalone")
+            secondary=build_company_fundamentals(normalized,symbol=symbol,sector=sector,basis=fallback_basis)
             companies[symbol]=secondary
-            if secondary.latest_period: basis_used[symbol]="standalone"
+            if secondary.latest_period: basis_used[symbol]=fallback_basis
     sectors={s:r.get("sector","Unclassified") for s,r in universe.items()}
     valuations=value_universe(companies,market,sectors)
 
@@ -150,6 +158,12 @@ def main() -> int:
             "profitability_score_financial_proxy":str(c.profitability_score) if c.profitability_score is not None else "",
             "growth_score_financial_proxy":str(c.growth_score) if c.growth_score is not None else "",
             "balance_sheet_score_financial_proxy":str(c.balance_sheet_score) if c.balance_sheet_score is not None else "",
+            "gross_npa_crore":str(latest.metrics.get("gross_npa")) if latest and latest.metrics.get("gross_npa") is not None else "",
+            "net_npa_crore":str(latest.metrics.get("net_npa")) if latest and latest.metrics.get("net_npa") is not None else "",
+            "gross_npa_ratio_pct":str(latest.metrics.get("gross_npa_ratio")*Decimal("100")) if latest and latest.metrics.get("gross_npa_ratio") is not None else "",
+            "net_npa_ratio_pct":str(latest.metrics.get("net_npa_ratio")*Decimal("100")) if latest and latest.metrics.get("net_npa_ratio") is not None else "",
+            "cet1_ratio_pct":str(latest.metrics.get("cet1_ratio")*Decimal("100")) if latest and latest.metrics.get("cet1_ratio") is not None else "",
+            "additional_tier1_ratio_pct":str(latest.metrics.get("additional_tier1_ratio")*Decimal("100")) if latest and latest.metrics.get("additional_tier1_ratio") is not None else "",
             "limitations":"; ".join(c.notes),
         })
         screen = valuation_screen(v.current_price, v.fair_value_low, v.fair_value_base, v.method, v.confidence)
@@ -246,6 +260,13 @@ def main() -> int:
         "instant_balance_sheet_observation_count":len(instant_observations),
         "instant_balance_sheet_metric_symbol_counts":{
             metric:len(symbols) for metric,symbols in sorted(instant_metric_symbols.items())
+        },
+        "bank_risk_metric_company_counts":{
+            metric:sum(1 for symbol,company in companies.items()
+                       if sectors.get(symbol," ").casefold()=="banking"
+                       and company.latest_period is not None
+                       and company.latest_period.metrics.get(metric) is not None)
+            for metric in ("gross_npa","net_npa","gross_npa_ratio","net_npa_ratio","cet1_ratio","additional_tier1_ratio")
         },
         "companies_with_provisional_fair_value":sum(1 for v in valuations.values() if v.fair_value_base is not None),
         "valuation_method_counts":valuation_method_counts,

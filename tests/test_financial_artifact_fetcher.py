@@ -1,6 +1,12 @@
-import io,json,sqlite3,zipfile
+import io,json,sqlite3,zipfile,importlib.util
+from pathlib import Path
 import pytest
-from scripts.download_latest_financial_artifact import validate_artifact,safe_member
+module_path=Path(__file__).resolve().parents[1]/'scripts'/'download_latest_financial_artifact.py'
+spec=importlib.util.spec_from_file_location('ies_artifact_fetcher',module_path)
+module=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+validate_artifact=module.validate_artifact
+safe_member=module.safe_member
 
 
 def make_artifact(count=64,include_mcx=True):

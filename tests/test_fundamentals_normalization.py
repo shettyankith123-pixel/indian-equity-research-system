@@ -97,7 +97,7 @@ def test_bank_equity_is_derived_from_capital_and_reserves_and_roes_are_computed(
  assert current.metrics["bank_advances_to_deposits"]==D("2900")/D("3200")
  assert current.metrics["bank_deposit_growth_yoy"]==D("3200")/D("2600")-D("1")
  company=build_company_fundamentals(periods,symbol="TEST",sector="Banking")
- assert company.data_completeness==D("1")
+ assert company.data_completeness==D("6")/D("11")
  assert company.profitability_score==D("100")
  assert company.balance_sheet_score is not None
  assert any("CRAR/CET1" in note for note in company.notes)

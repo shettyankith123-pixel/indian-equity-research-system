@@ -56,10 +56,11 @@ def fetch_integrated_filing_listing(
 ) -> tuple[dict[str, Any] | None, str]:
     """Fetch and combine all available NSE Integrated Filing pages.
 
-    NSE's response exposes totalCount, page and size. When totalCount is
-    available, the server-reported page size determines the final page.
-    Responses without a usable totalCount use short-page termination.
-    A hard page cap prevents an accidental unbounded request loop.
+    NSE requests are numbered from 1, but the response page field is
+    zero-based. When totalCount is available, the server-reported page
+    size determines the final request page. Responses without a usable
+    totalCount use short-page termination. A hard page cap prevents an
+    accidental unbounded request loop.
 
     The returned dictionary retains the first-page metadata, replaces data
     with combined de-duplicated rows, and adds a private _pagination summary.
@@ -87,7 +88,9 @@ def fetch_integrated_filing_listing(
     if not isinstance(first_rows, list):
         raise RuntimeError(f"NSE filing page {page} has an invalid data field")
 
-    raw_total = listing.get("totalCount", listing.get("total_count"))
+    raw_total = listing.get("totalCount")
+    if raw_total is None:
+        raw_total = listing.get("total_count")
     total_count = _positive_int(raw_total)
     page_size = _positive_int(listing.get("size")) or size
     if total_count == 0 and first_rows:
@@ -131,9 +134,11 @@ def fetch_integrated_filing_listing(
     current_page = page
     while True:
         returned_page = _positive_int(current_listing.get("page"))
-        if returned_page is not None and returned_page != current_page:
+        expected_response_page = current_page - 1
+        if returned_page is not None and returned_page != expected_response_page:
             raise RuntimeError(
-                f"NSE returned page {returned_page} when page {current_page} was requested"
+                f"NSE returned zero-based page {returned_page} when "
+                f"request page {current_page} (response page {expected_response_page}) was expected"
             )
 
         current_rows = current_listing.get("data")
@@ -143,8 +148,8 @@ def fetch_integrated_filing_listing(
             if pages_fetched == 0 or last_page is None:
                 break
             raise RuntimeError(
-                f"NSE filing pagination stopped at empty page {current_page} "
-                f"before the expected final page {last_page}"
+                f"NSE filing pagination stopped at empty request page {current_page} "
+                f"before the expected final request page {last_page}"
             )
 
         pages_fetched += 1
@@ -174,7 +179,7 @@ def fetch_integrated_filing_listing(
 
         if not isinstance(next_listing, dict) or not isinstance(next_listing.get("data"), list):
             raise RuntimeError(
-                f"NSE filing pagination returned an invalid response for page {next_page}"
+                f"NSE filing pagination returned an invalid response for request page {next_page}"
             )
         current_listing = next_listing
         current_page = next_page
@@ -191,7 +196,7 @@ def fetch_integrated_filing_listing(
         "complete": (
             raw_row_count >= total_count
             if total_count is not None
-            else pages_fetched > 0
+            else (pages_fetched > 0)
         ),
     }
     return listing, query_mode

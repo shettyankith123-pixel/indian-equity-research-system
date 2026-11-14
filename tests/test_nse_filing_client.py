@@ -24,7 +24,7 @@ class FakeNSEClient:
 
 
 def test_symbol_only_fallback_runs_when_issuer_filtered_listing_is_empty():
-    client = FakeNSEClient({"data": []}, {"data": [{"symbol": "MCX"}]})
+    client = FakeNSEClient({"data": []}, {"data": [{"symbol": "MCX"}], "page": 0})
     listing, query_mode = fetch_integrated_filing_listing(
         client, "MCX", "Multi Commodity Exchange of India Limited", page=1, size=100
     )
@@ -39,7 +39,10 @@ def test_symbol_only_fallback_runs_when_issuer_filtered_listing_is_empty():
 
 
 def test_symbol_and_issuer_lookup_is_kept_when_it_returns_rows():
-    client = FakeNSEClient({"data": [{"symbol": "ICICIBANK"}]}, {"data": []})
+    client = FakeNSEClient(
+        {"data": [{"symbol": "ICICIBANK"}], "page": 0},
+        {"data": []},
+    )
     listing, query_mode = fetch_integrated_filing_listing(
         client, "ICICIBANK", "ICICI Bank Limited"
     )
@@ -48,12 +51,12 @@ def test_symbol_and_issuer_lookup_is_kept_when_it_returns_rows():
     assert client.fallback_call is None
 
 
-def test_all_pages_are_fetched_using_total_count_and_rows_are_deduplicated():
+def test_all_pages_are_fetched_using_total_count_and_zero_based_response_pages():
     client = FakeNSEClient(
         {
             "pages": {
-                1: {"data": [{"seq_Id": 1}, {"seq_Id": 2}], "totalCount": 4, "page": 1, "size": 2},
-                2: {"data": [{"seq_Id": 2}, {"seq_Id": 3}], "totalCount": 4, "page": 2, "size": 2},
+                1: {"data": [{"seq_Id": 1}, {"seq_Id": 2}], "totalCount": 4, "page": 0, "size": 2},
+                2: {"data": [{"seq_Id": 2}, {"seq_Id": 3}], "totalCount": 4, "page": 1, "size": 2},
             }
         },
         {"data": []},
@@ -81,8 +84,8 @@ def test_pagination_continues_on_symbol_only_fallback():
         {"data": []},
         {
             "pages": {
-                1: {"data": [{"seq_Id": "a"}, {"seq_Id": "b"}], "totalCount": 3},
-                2: {"data": [{"seq_Id": "c"}], "totalCount": 3},
+                1: {"data": [{"seq_Id": "a"}, {"seq_Id": "b"}], "totalCount": 3, "page": 0},
+                2: {"data": [{"seq_Id": "c"}], "totalCount": 3, "page": 1},
             }
         },
     )
@@ -98,8 +101,8 @@ def test_missing_total_count_uses_short_final_page_to_stop():
     client = FakeNSEClient(
         {
             "pages": {
-                1: {"data": [{"seq_Id": 1}, {"seq_Id": 2}]},
-                2: {"data": [{"seq_Id": 3}]},
+                1: {"data": [{"seq_Id": 1}, {"seq_Id": 2}], "page": 0},
+                2: {"data": [{"seq_Id": 3}], "page": 1},
             }
         },
         {"data": []},
@@ -115,8 +118,8 @@ def test_empty_page_before_reported_final_page_fails_instead_of_silently_truncat
     client = FakeNSEClient(
         {
             "pages": {
-                1: {"data": [{"seq_Id": 1}, {"seq_Id": 2}], "totalCount": 4},
-                2: {"data": []},
+                1: {"data": [{"seq_Id": 1}, {"seq_Id": 2}], "totalCount": 4, "page": 0},
+                2: {"data": [], "page": 1},
             }
         },
         {"data": []},
@@ -124,6 +127,19 @@ def test_empty_page_before_reported_final_page_fails_instead_of_silently_truncat
     try:
         fetch_integrated_filing_listing(client, "TEST", "Test Limited", size=2)
     except RuntimeError as exc:
-        assert "empty page 2" in str(exc)
+        assert "empty request page 2" in str(exc)
     else:
         raise AssertionError("Expected incomplete pagination to fail")
+
+
+def test_wrong_zero_based_response_page_fails_with_clear_error():
+    client = FakeNSEClient(
+        {"data": [{"seq_Id": 1}], "page": 1},
+        {"data": []},
+    )
+    try:
+        fetch_integrated_filing_listing(client, "TEST", "Test Limited")
+    except RuntimeError as exc:
+        assert "zero-based page 1" in str(exc)
+    else:
+        raise AssertionError("Expected incorrect response page to fail")

@@ -309,6 +309,96 @@ def extract_observations(
     }
     return observations, summary
 
+
+def reconcile_duplicate_observations(
+    observations: list[FinancialObservation],
+) -> tuple[list[FinancialObservation], int, list[dict[str, Any]]]:
+    """Remove exact repeated facts; quarantine value conflicts instead of aborting a whole run.
+
+    The SQLite uniqueness contract intentionally identifies one fact by source, metric,
+    basis and exact period dates. If two period labels collide for the same span, the
+    span-derived label is preferred (instant/quarter/half-year/year/transition). If
+    values or units conflict for the same source key, every conflicting copy is omitted
+    and a diagnostic is returned for the coverage report.
+    """
+    def identity(item: FinancialObservation) -> tuple[str, ...]:
+        p = item.period
+        return (
+            item.symbol, item.metric, p.start_date.isoformat(), p.end_date.isoformat(),
+            p.basis, item.source.source_name, item.source.reference_id or "",
+            item.observation_kind,
+        )
+
+    def expected_period_kind(item: FinancialObservation) -> str:
+        span = (item.period.end_date - item.period.start_date).days + 1
+        if span == 1:
+            return "instant"
+        if 70 <= span <= 140:
+            return "quarter"
+        if 150 <= span <= 220:
+            return "half_year"
+        if 300 <= span <= 400:
+            return "year"
+        if 450 <= span <= 730:
+            return "transition_period"
+        return item.period.kind
+
+    selected: dict[tuple[str, ...], FinancialObservation] = {}
+    conflicts: dict[tuple[str, ...], dict[str, Any]] = {}
+    duplicate_count = 0
+
+    for item in observations:
+        key = identity(item)
+        if key in conflicts:
+            conflict = conflicts[key]
+            conflict["values"].append({
+                "value": str(item.value),
+                "unit": item.unit,
+                "period_kind": item.period.kind,
+            })
+            continue
+        existing = selected.get(key)
+        if existing is None:
+            selected[key] = item
+            continue
+
+        if (
+            existing.value == item.value
+            and existing.unit == item.unit
+            and existing.currency == item.currency
+        ):
+            duplicate_count += 1
+            # Preserve the period-kind label implied by the exact duration.
+            expected = expected_period_kind(existing)
+            if item.period.kind == expected and existing.period.kind != expected:
+                selected[key] = item
+            continue
+
+        selected.pop(key, None)
+        conflicts[key] = {
+            "symbol": item.symbol,
+            "metric": item.metric,
+            "period_start": item.period.start_date.isoformat(),
+            "period_end": item.period.end_date.isoformat(),
+            "basis": item.period.basis,
+            "source_name": item.source.source_name,
+            "reference_id": item.source.reference_id or "",
+            "values": [
+                {
+                    "value": str(existing.value),
+                    "unit": existing.unit,
+                    "period_kind": existing.period.kind,
+                },
+                {
+                    "value": str(item.value),
+                    "unit": item.unit,
+                    "period_kind": item.period.kind,
+                },
+            ],
+        }
+
+    return list(selected.values()), duplicate_count, list(conflicts.values())
+
 def select_filing(rows: list[dict[str, Any]], target_end: date, basis: str) -> dict[str, Any] | None:
     by_date = [r for r in rows if filing_date(r) == target_end and row_basis(r) == basis]
     return latest_for_basis(by_date, basis)
@@ -498,8 +588,26 @@ def main() -> int:
         coverage.append(row_coverage)
         time.sleep(max(0.0, args.delay_seconds))
 
-    if all_observations:
-        inserted = repo.insert_many(all_observations)
+    raw_observation_count = len(all_observations)
+    reconciled_observations, duplicate_observation_count, observation_conflicts = (
+        reconcile_duplicate_observations(all_observations)
+    )
+    for conflict in observation_conflicts:
+        message = (
+            f"Conflicting duplicate fact excluded: {conflict['metric']} "
+            f"{conflict['period_start']}..{conflict['period_end']} "
+            f"{conflict['basis']} source={conflict['reference_id']} "
+            f"values={conflict['values']}"
+        )
+        failures.append(f"{conflict['symbol']}: {message}")
+        for row in coverage:
+            if row["symbol"] == conflict["symbol"]:
+                row["errors"].append(message)
+                row["status"] = "data_conflict_partial"
+                break
+
+    if reconciled_observations:
+        inserted = repo.insert_many(reconciled_observations)
     else:
         inserted = 0
 
@@ -557,6 +665,10 @@ def main() -> int:
         "annual_company_count": sum(1 for r in coverage if r["annual_filings"]),
         "transition_period_company_count": sum(1 for r in coverage if r["transition_period_filings"]),
         "observation_count": inserted,
+        "raw_observation_count": raw_observation_count,
+        "duplicate_observation_count": duplicate_observation_count,
+        "conflicting_observation_count": len(observation_conflicts),
+        "observation_conflicts": observation_conflicts,
         "sqlite_database": str(db_path),
         "csv_observations": str(csv_path),
         "coverage_csv": str(coverage_path),

@@ -363,3 +363,13 @@ Workflow run 43530846091 completed successfully on commit 34bd48e, with 64 compa
 The report-builder smoke test passed with 64 market quotes and a two-year HCLTECH test database: it generated all six expected registers, identified one company with provisional valuation, and kept all 64 decisions at ASSESS because governance/overall-quality review was deliberately absent. This is a pipeline smoke test, not the full 64-stock investment scan.
 
 No new full-universe acceptance is claimed until steps 1–4 above pass on the revised code.
+
+
+### Duplicate observation reconciliation — 14 November 2026
+
+The first complete 64-issuer attempt on the instant-context importer reached issuer 64 and parsed filing data, then failed during atomic SQLite insert because two facts shared the repository's unique source/metric/period key. The importer now reconciles observations before insertion:
+- Exact duplicate values collapse to one record.
+- If only the period label differs for the same exact dates, the label consistent with the duration is retained.
+- Conflicting values/units for the same source key are quarantined, recorded in the failure list and that issuer's coverage errors, while non-conflicting observations continue to load.
+- The summary records raw facts, imported facts, identical duplicate count and conflicting fact count.
+- The duplicate rules have focused unit tests; full CI and a fresh full-universe import must still pass before acceptance.

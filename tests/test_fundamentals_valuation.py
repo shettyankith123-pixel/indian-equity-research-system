@@ -56,6 +56,10 @@ def test_missing_net_debt_blocks_ev_ebitda_multiple():
   companies[symbol]=company(symbol,"Industrials",annual);market[symbol]={"price_inr":D(price),"market_cap_inr_crore":D(cap)}
  result=value_universe(companies,market,sectors)
  assert all(v.cross_checks["peer_ev_ebitda"] is None for v in result.values())
+ assert result["A"].cross_checks["pe_value"] is not None
+ assert result["A"].method == "Sector-relative P/E / EV-EBITDA"
+ assert result["A"].fair_value_base is None
+ assert result["A"].confidence <= D(".50")
 
 
 def test_bajaj_finance_nbfc_uses_justified_pb_not_industrial_dcf():
@@ -137,7 +141,7 @@ def test_bank_valuation_is_provisional_with_one_annual_roe_only():
     assert v.method.startswith("Justified P/B")
     assert v.fair_value_base is not None
     assert any("only one valid annual ROE" in w for w in v.warnings)
-    assert v.confidence < D(".70")
+    assert v.confidence <= D(".55")
 
 
 def test_proxy_only_cash_flow_does_not_qualify_for_fcfe_dcf():

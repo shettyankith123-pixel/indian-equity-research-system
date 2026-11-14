@@ -22,3 +22,20 @@ def test_valuation_screen_distinguishes_entry_zones_from_recommendations():
     assert watch["valuation_signal"]=="BELOW_BASE_FAIR_VALUE" or watch["valuation_signal"]=="WATCH_FOR_ACCUMULATION"
     assert above["valuation_signal"]=="ABOVE_BASE_FAIR_VALUE"
     assert missing["valuation_signal"]=="NO_RELIABLE_FAIR_VALUE"
+
+
+def test_relative_multiples_do_not_create_fair_value_or_entry_zones():
+    relative=valuation_screen(
+        D("100"),D("80"),D("120"),method="Sector-relative P/E / EV-EBITDA",confidence=D(".90")
+    )
+    assert relative["valuation_signal"]=="RELATIVE_ONLY_CONTEXT"
+    assert relative["buy_entry_max"]==""
+    assert relative["accumulate_entry_max"]==""
+
+
+def test_low_confidence_intrinsic_reference_does_not_create_entry_zones():
+    provisional=valuation_screen(
+        D("100"),D("80"),D("120"),method="Justified P/B using sustainable ROE",confidence=D(".55")
+    )
+    assert provisional["valuation_signal"]=="LOW_CONFIDENCE_REFERENCE_ONLY"
+    assert provisional["buy_entry_max"]==""

@@ -419,3 +419,8 @@ The valuation audit identified a material distinction that must remain visible i
 - Where the latest bank interim period cannot calculate ROE because a matching prior-year balance sheet is unavailable, the financial profitability proxy may fall back to the latest available annual ROE and must state the annual period used. It must not claim that ROE is wholly unavailable when annual evidence exists.
 
 **Acceptance still required:** focused regression tests, full GitHub CI, a refreshed 64-company report, and inspection of the revised valuation-method counts and held-stock outputs. This code correction does not by itself complete company quality, governance, bank credit-risk or portfolio-reconciliation research.
+
+
+### Relative valuation is context only — 15 November 2026
+
+The revised full-universe run had no issuer with three annual FCFE observations. It still showed large peer-multiple estimates as fair values (for example, the capital-goods and specialty-chemical groupings), which is not a sound basis for entry prices. The engine now retains per-share peer P/E and EV/EBITDA checks as comparison context but does not publish peer-only outputs in the intrinsic fair-value fields. Peer-only confidence is capped at 0.50. A justified P/B based on only one annual ROE observation is capped at 0.55. The report screen withholds upside, margin-of-safety and BUY/ACCUMULATE entry levels for peer-only values and all references below 0.65 confidence.

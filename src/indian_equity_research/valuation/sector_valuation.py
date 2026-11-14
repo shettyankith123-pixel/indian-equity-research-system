@@ -217,11 +217,15 @@ def value_universe(
                 model_conf=D(".65")
                 warnings.append("Sector peer cross-check unavailable; DCF only.")
             elif peer_values:
-                pb=_median(peer_values)
-                low,base,high=pb*D(".85"),pb,pb*D("1.15")
+                # Peer multiples are context, not an intrinsic fair value. Keep
+                # per-share peer checks in cross_checks, but do not publish them
+                # as fair value or derive entry prices from them.
                 method="Sector-relative P/E / EV-EBITDA"
                 model_conf=D(".5")
-                warnings.append("Relative-multiple valuation only; intrinsic DCF unavailable.")
+                warnings.append(
+                    "Relative-multiple peer values are comparison context only; "
+                    "no intrinsic fair value or entry range is published."
+                )
             else:
                 warnings.append("Insufficient annual FCF, earnings or peer coverage for a fair value.")
 
@@ -234,6 +238,10 @@ def value_universe(
         hist_factor=min(D("1"),D(annual_count)/D("3"))
         quote_factor=D("1") if price is not None and cap is not None else ZERO
         confidence=min(D(".95"),D(".25")*hist_factor+D(".35")*data_factor+D(".25")*model_conf+D(".15")*quote_factor)
+        if method == "Sector-relative P/E / EV-EBITDA":
+            confidence=min(confidence,D(".50"))
+        if any("only one valid annual ROE" in warning for warning in warnings):
+            confidence=min(confidence,D(".55"))
         status="provisional" if base is not None and annual_count>=2 else "insufficient_data"
         results[symbol]=ValuationResult(
             symbol,sector,price,cap,low,base,high,method,confidence,status,

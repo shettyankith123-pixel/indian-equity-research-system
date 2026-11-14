@@ -33,10 +33,20 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 
-def valuation_screen(price: Decimal | None, low: Decimal | None, base: Decimal | None) -> dict[str, str]:
-    """Show a valuation-only watch signal; this is not an investment recommendation."""
+def valuation_screen(
+    price: Decimal | None,
+    low: Decimal | None,
+    base: Decimal | None,
+    method: str = "Intrinsic valuation",
+    confidence: Decimal = Decimal("1"),
+) -> dict[str, str]:
+    """Show entry zones only when a defensible intrinsic value is available."""
+    if method == "Sector-relative P/E / EV-EBITDA":
+        return {"valuation_signal": "RELATIVE_ONLY_CONTEXT", "upside_to_base_pct": "", "margin_of_safety_pct": "", "buy_entry_max": "", "accumulate_entry_max": ""}
     if price is None or base is None or price <= 0 or base <= 0:
         return {"valuation_signal": "NO_RELIABLE_FAIR_VALUE", "upside_to_base_pct": "", "margin_of_safety_pct": "", "buy_entry_max": "", "accumulate_entry_max": ""}
+    if confidence < Decimal("0.65"):
+        return {"valuation_signal": "LOW_CONFIDENCE_REFERENCE_ONLY", "upside_to_base_pct": "", "margin_of_safety_pct": "", "buy_entry_max": "", "accumulate_entry_max": ""}
     buy_entry = base * Decimal("0.85")
     accumulate_entry = base * Decimal("0.92")
     upside = (base / price - Decimal("1")) * Decimal("100")
@@ -142,7 +152,7 @@ def main() -> int:
             "balance_sheet_score_financial_proxy":str(c.balance_sheet_score) if c.balance_sheet_score is not None else "",
             "limitations":"; ".join(c.notes),
         })
-        screen = valuation_screen(v.current_price, v.fair_value_low, v.fair_value_base)
+        screen = valuation_screen(v.current_price, v.fair_value_low, v.fair_value_base, v.method, v.confidence)
         valuation_rows.append({
             "symbol":symbol,"sector":sectors[symbol],
             "price_inr":str(v.current_price) if v.current_price is not None else "",

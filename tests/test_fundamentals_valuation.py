@@ -57,9 +57,8 @@ def test_missing_net_debt_blocks_ev_ebitda_multiple():
  result=value_universe(companies,market,sectors)
  assert all(v.cross_checks["peer_ev_ebitda"] is None for v in result.values())
  assert result["A"].cross_checks["pe_value"] is not None
- assert result["A"].method == "Sector-relative P/E / EV-EBITDA"
- assert result["A"].fair_value_base is None
- assert result["A"].confidence <= D(".50")
+ assert result["A"].method == "FCFE DCF with sector peer cross-checks"
+ assert result["A"].fair_value_base is not None
 
 
 def test_bajaj_finance_nbfc_uses_justified_pb_not_industrial_dcf():
@@ -152,3 +151,19 @@ def test_proxy_only_cash_flow_does_not_qualify_for_fcfe_dcf():
                        {"X":"Industrials"})["X"]
  assert result.fair_value_base is None
  assert any("proxy-only cash flows are not discounted" in warning for warning in result.warnings)
+
+
+def test_peer_only_multiple_checks_do_not_become_fair_value():
+    companies={};market={};sectors={s:"Industrials" for s in ["A","B","C","D"]}
+    for symbol,cap,price in [("A",1000,10),("B",1200,12),("C",1400,14),("D",1600,16)]:
+        annual=[period(symbol,y,{"profit_after_tax":D("30"),"annualised_ebitda":D("40"),"net_debt":D("0"),"total_equity":D("100")})
+                for y in ["2025-03-31","2026-03-31"]]
+        companies[symbol]=company(symbol,"Industrials",annual)
+        market[symbol]={"price_inr":D(price),"market_cap_inr_crore":D(cap)}
+    results=value_universe(companies,market,sectors)
+    result=results["A"]
+    assert result.cross_checks["pe_value"] is not None
+    assert result.method == "Sector-relative P/E / EV-EBITDA"
+    assert result.fair_value_base is None
+    assert result.fair_value_low is None and result.fair_value_high is None
+    assert result.confidence <= D(".50")

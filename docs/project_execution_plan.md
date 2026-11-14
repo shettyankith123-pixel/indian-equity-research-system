@@ -378,3 +378,11 @@ The first complete 64-issuer attempt on the instant-context importer reached iss
 ### Report coverage counters — 14 November 2026
 
 The research report builder now separately reports the count of issuers with any instant balance-sheet facts, the count whose latest flow period has a same-date balance-sheet snapshot, total instant observation count, symbol breadth per balance-sheet metric and valuation-method counts. A 64-universe smoke test with one issuer/two annual periods and 12 instant facts showed these counts serialize correctly and left all 64 decisions at ASSESS until governance/quality review.
+
+
+### Financial-sector valuation separation — 14 November 2026
+
+The sector valuation layer was further refined:
+- Bajaj Finance (NBFC) uses the justified P/B sensitivity from sustainable ROE and book value per share rather than the industrial cash-flow DCF.
+- Fee-based/market-infrastructure companies classified under the broad Financial Services sector (e.g. HDFC AMC, CAMS, CDSL, BSE, MCX and Anand Rathi) do not use cross-peer P/E or EV/EBITDA until a defensible sub-sector peer map exists. Their FCFE-style DCF may be used only when their own annual cash-flow history supports it.
+- Regression tests verify both rules.

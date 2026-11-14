@@ -56,3 +56,42 @@ def test_missing_net_debt_blocks_ev_ebitda_multiple():
   companies[symbol]=company(symbol,"Industrials",annual);market[symbol]={"price_inr":D(price),"market_cap_inr_crore":D(cap)}
  result=value_universe(companies,market,sectors)
  assert all(v.cross_checks["peer_ev_ebitda"] is None for v in result.values())
+
+
+def test_bajaj_finance_nbfc_uses_justified_pb_not_industrial_dcf():
+    annual=[]
+    for end,roe,equity in [
+        ("2024-03-31",D(".18"),D("1000")),
+        ("2025-03-31",D(".19"),D("1200")),
+        ("2026-03-31",D(".20"),D("1400")),
+    ]:
+        annual.append(period("BAJFINANCE",end,{"return_on_equity":roe,"total_equity":equity}))
+    c=company("BAJFINANCE","Financial Services",annual)
+    v=value_universe(
+        {"BAJFINANCE":c},
+        {"BAJFINANCE":{"price_inr":D("100"),"market_cap_inr_crore":D("15000")}},
+        {"BAJFINANCE":"Financial Services"},
+    )["BAJFINANCE"]
+    assert v.method.startswith("Justified P/B")
+    assert v.fair_value_low < v.fair_value_base < v.fair_value_high
+
+
+def test_financial_services_peer_multiples_disabled_without_subsector_map():
+    companies={};market={}
+    symbols=["HDFCAMC","CAMS","CDSL","BSE"]
+    for index,symbol in enumerate(symbols,1):
+        annual=[period(symbol,y,{
+            "free_cash_flow_to_equity_proxy":D(str(50+index)),
+            "profit_after_tax":D(str(60+index)),
+            "annualised_ebitda":D(str(70+index)),
+            "net_debt":D("0"),
+            "total_equity":D("100"),
+        }) for y in ["2024-03-31","2025-03-31","2026-03-31"]]
+        companies[symbol]=company(symbol,"Financial Services",annual)
+        market[symbol]={"price_inr":D("100"),"market_cap_inr_crore":D(str(1000*index))}
+    sectors={symbol:"Financial Services" for symbol in symbols}
+    results=value_universe(companies,market,sectors)
+    for result in results.values():
+        assert result.cross_checks["peer_pe"] is None
+        assert result.cross_checks["peer_ev_ebitda"] is None
+        assert "sub-sector peer map" in " ".join(result.warnings)

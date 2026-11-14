@@ -45,6 +45,8 @@ def assumptions_for_sector(sector:str)->SectorAssumptions:
     s=sector.casefold()
     if "bank" in s:
         return SectorAssumptions(D("0"),D("0"),D("0"),D(".145"),D(".13"),D(".12"),D(".04"),D(".05"),D(".055"))
+    if s == "financial services":
+        return SectorAssumptions(D(".04"),D(".07"),D(".09"),D(".14"),D(".13"),D(".12"),D(".035"),D(".045"),D(".05"))
     if any(x in s for x in ("mining","metals","chemicals","oil & gas","gas utilities")):
         return SectorAssumptions(D(".02"),D(".06"),D(".09"),D(".15"),D(".135"),D(".12"),D(".025"),D(".035"),D(".04"))
     if any(x in s for x in ("fmcg","consumer","beverage")):
@@ -111,7 +113,7 @@ def value_universe(
         low=base=high=None;method="No reliable valuation";model_conf=D(".1")
         if company.latest_period is None:
             warnings.append("No financial statements available.")
-        elif "bank" in sector.casefold():
+        elif "bank" in sector.casefold() or symbol == "BAJFINANCE":
             roes=[v for v in _annual(company,"return_on_equity") if v>0]
             equity=own["equity"]
             if len(roes)>=2 and equity is not None and shares is not None and shares>0:
@@ -149,7 +151,11 @@ def value_universe(
                     checks["dcf_base"]=dcf_values[1]
             else:
                 warnings.append("DCF requires two or more positive annual CFO-minus-capex observations.")
-            peers=[s for s in companies if s!=symbol and sectors.get(s,companies[s].sector).casefold()==sector.casefold()]
+            if sector.casefold() == "financial services":
+                peers=[]
+                warnings.append("Financial Services contains materially different business models in this universe; cross-peer P/E and EV/EBITDA comparisons are disabled without a sub-sector peer map.")
+            else:
+                peers=[s for s in companies if s!=symbol and sectors.get(s,companies[s].sector).casefold()==sector.casefold()]
             pe_values=[];ev_values=[]
             for peer in peers:
                 item=raw[peer]

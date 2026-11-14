@@ -100,7 +100,8 @@ def test_bank_equity_is_derived_from_capital_and_reserves_and_roes_are_computed(
  assert company.data_completeness==D("6")/D("11")
  assert company.profitability_score==D("100")
  assert company.balance_sheet_score is not None
- assert any("CRAR/CET1" in note for note in company.notes)
+ assert any("CET1 ratio is not available" in note for note in company.notes)
+ assert any("CRAR is not calculated" in note for note in company.notes)
  assert any("NPA" in note for note in company.notes)
 
 

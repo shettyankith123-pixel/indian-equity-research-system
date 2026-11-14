@@ -32,6 +32,34 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer=csv.DictWriter(f,fieldnames=fields);writer.writeheader();writer.writerows(rows)
 
 
+
+def valuation_screen(price: Decimal | None, low: Decimal | None, base: Decimal | None) -> dict[str, str]:
+    """Show a valuation-only watch signal; this is not an investment recommendation."""
+    if price is None or base is None or price <= 0 or base <= 0:
+        return {"valuation_signal": "NO_RELIABLE_FAIR_VALUE", "upside_to_base_pct": "", "margin_of_safety_pct": "", "buy_entry_max": "", "accumulate_entry_max": ""}
+    buy_entry = base * Decimal("0.85")
+    accumulate_entry = base * Decimal("0.92")
+    upside = (base / price - Decimal("1")) * Decimal("100")
+    margin = (Decimal("1") - price / base) * Decimal("100")
+    if low is not None and price <= low:
+        signal = "BELOW_BEAR_CASE"
+    elif price <= buy_entry:
+        signal = "POTENTIALLY_ATTRACTIVE"
+    elif price <= accumulate_entry:
+        signal = "WATCH_FOR_ACCUMULATION"
+    elif price < base:
+        signal = "BELOW_BASE_FAIR_VALUE"
+    else:
+        signal = "ABOVE_BASE_FAIR_VALUE"
+    return {
+        "valuation_signal": signal,
+        "upside_to_base_pct": str(upside),
+        "margin_of_safety_pct": str(margin),
+        "buy_entry_max": str(buy_entry),
+        "accumulate_entry_max": str(accumulate_entry),
+    }
+
+
 def main() -> int:
     parser=argparse.ArgumentParser()
     parser.add_argument("--db",type=Path,required=True)
@@ -114,6 +142,7 @@ def main() -> int:
             "balance_sheet_score_financial_proxy":str(c.balance_sheet_score) if c.balance_sheet_score is not None else "",
             "limitations":"; ".join(c.notes),
         })
+        screen = valuation_screen(v.current_price, v.fair_value_low, v.fair_value_base)
         valuation_rows.append({
             "symbol":symbol,"sector":sectors[symbol],
             "price_inr":str(v.current_price) if v.current_price is not None else "",
@@ -121,6 +150,7 @@ def main() -> int:
             "fair_value_low":str(v.fair_value_low) if v.fair_value_low is not None else "",
             "fair_value_base":str(v.fair_value_base) if v.fair_value_base is not None else "",
             "fair_value_high":str(v.fair_value_high) if v.fair_value_high is not None else "",
+            **screen,
             "method":v.method,"confidence":str(v.confidence),"valuation_status":v.valuation_status,
             "quote_timestamp":market.get(symbol,{}).get("price_updated_at_ist",""),
             "cross_checks":"; ".join(f"{k}={value}" for k,value in v.cross_checks.items() if value is not None),
@@ -166,6 +196,16 @@ def main() -> int:
     _write_csv(args.output_dir/"financial_periods.csv",period_rows)
     _write_csv(args.output_dir/"company_fundamentals.csv",fundamentals_rows)
     _write_csv(args.output_dir/"valuation_register.csv",valuation_rows)
+    _write_csv(
+        args.output_dir/"valuation_opportunity_screen.csv",
+        sorted(
+            valuation_rows,
+            key=lambda row: (
+                row.get("valuation_signal") not in {"BELOW_BEAR_CASE","POTENTIALLY_ATTRACTIVE","WATCH_FOR_ACCUMULATION"},
+                -float(row["margin_of_safety_pct"]) if row.get("margin_of_safety_pct") else float("inf"),
+            ),
+        ),
+    )
     _write_csv(args.output_dir/"research_inputs.csv",research_rows)
     _write_csv(args.output_dir/"wealth_scan_preview.csv",decision_rows)
     counts={}
@@ -174,6 +214,10 @@ def main() -> int:
     valuation_method_counts={}
     for result in valuations.values():
         valuation_method_counts[result.method]=valuation_method_counts.get(result.method,0)+1
+    valuation_signal_counts={}
+    for row in valuation_rows:
+        signal=row["valuation_signal"]
+        valuation_signal_counts[signal]=valuation_signal_counts.get(signal,0)+1
     latest_period_end_by_symbol={
         symbol:company.latest_period.period_end
         for symbol,company in companies.items() if company.latest_period is not None
@@ -195,6 +239,7 @@ def main() -> int:
         },
         "companies_with_provisional_fair_value":sum(1 for v in valuations.values() if v.fair_value_base is not None),
         "valuation_method_counts":valuation_method_counts,
+        "valuation_signal_counts":valuation_signal_counts,
         "financial_observation_count":len(observations),
         "normalized_period_count":len(normalized),
         "decision_counts":counts,"held_symbols":sorted(held),

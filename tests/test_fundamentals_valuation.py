@@ -95,3 +95,46 @@ def test_financial_services_peer_multiples_disabled_without_subsector_map():
         assert result.cross_checks["peer_pe"] is None
         assert result.cross_checks["peer_ev_ebitda"] is None
         assert "sub-sector peer map" in " ".join(result.warnings)
+
+
+
+def test_bank_pb_uses_one_annual_roe_plus_latest_annualised_quarter_roe():
+    annual=[period("BANK","2026-03-31",{"return_on_equity":D(".16"),"total_equity":D("1200")})]
+    q=FundamentalPeriod(
+        symbol="BANK",basis="consolidated",source_name="NSE",source_url="https://example.com",
+        source_reference_id="BANK-Q2",publication_date=date(2026,11,1),
+        period_start=date(2026,7,1),period_end=date(2026,9,30),period_kind="quarter",
+        metrics={"return_on_equity":D(".18"),"total_equity":D("1300")},
+        completeness=D("1"),missing_metrics=tuple(),
+    )
+    c=CompanyFundamentals(
+        symbol="BANK",basis="consolidated",sector="Banking",latest_period=q,
+        annual_periods=tuple(annual),quarterly_periods=(q,),growth_score=D("70"),
+        balance_sheet_score=D("70"),profitability_score=D("80"),data_completeness=D("1"),
+        data_as_of=q.publication_date,source_name="NSE",source_url="https://example.com",notes=tuple(),
+    )
+    v=value_universe(
+        {"BANK":c},{"BANK":{"price_inr":D("100"),"market_cap_inr_crore":D("13000")}},
+        {"BANK":"Banking"},
+    )["BANK"]
+    assert v.method.startswith("Justified P/B")
+    assert v.fair_value_low < v.fair_value_base < v.fair_value_high
+    assert any("one annual ROE plus a latest annualised quarter" in warning for warning in v.warnings)
+
+
+
+def test_bank_valuation_is_provisional_with_one_annual_roe_only():
+    annual=[period("BANK","2026-03-31",{
+        "return_on_equity":D(".155"),
+        "total_equity":D("380000"),
+    })]
+    c=company("BANK","Banking",annual)
+    v=value_universe(
+        {"BANK":c},
+        {"BANK":{"price_inr":D("1600"),"market_cap_inr_crore":D("1100000")}},
+        {"BANK":"Banking"},
+    )["BANK"]
+    assert v.method.startswith("Justified P/B")
+    assert v.fair_value_base is not None
+    assert any("only one valid annual ROE" in w for w in v.warnings)
+    assert v.confidence < D(".70")

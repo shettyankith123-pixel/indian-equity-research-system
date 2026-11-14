@@ -61,6 +61,22 @@ def _clip(value: Decimal) -> Decimal:
     return min(D("100"), max(ZERO, value))
 
 
+def _equity_from_instant(values: dict[str, Decimal]) -> tuple[Decimal | None, str | None]:
+    """Return reported equity or an explicitly derivable accounting residual."""
+    reported = values.get("total_equity")
+    if reported is not None:
+        return reported, "reported_equity"
+    capital = values.get("bank_share_capital")
+    reserves = values.get("bank_reserves_and_surplus")
+    if capital is not None and reserves is not None:
+        return capital + reserves, "bank_capital_plus_reserves"
+    assets = values.get("total_assets")
+    liabilities = values.get("total_liabilities")
+    if assets is not None and liabilities is not None and assets >= liabilities:
+        return assets - liabilities, "assets_minus_liabilities"
+    return None, None
+
+
 def normalize_financial_observations(observations: Iterable[FinancialObservation]) -> list[FundamentalPeriod]:
     groups: dict[tuple, dict] = {}
     for obs in observations:
@@ -79,14 +95,36 @@ def normalize_financial_observations(observations: Iterable[FinancialObservation
         if kind == "instant":
             instants[(symbol, basis, source, reference_id, end)] = group["metrics"]
 
-    # Average-balance ratios may use the previous year's snapshot from a different filing.
-    instant_history: dict[tuple, list[tuple[date, date, dict[str, Decimal]]]] = defaultdict(list)
+    # Average-balance ratios may use prior-year snapshots imported from separate
+    # filings. Multiple filings can carry the same instant date but different
+    # comparatives (for example, FY25 has a full balance sheet while FY26's
+    # comparative context includes only cash). Merge facts by date, preferring
+    # the richer snapshot for overlapping facts and retaining facts absent from
+    # the shorter comparative context.
+    instant_candidates: dict[tuple, dict[date, list[tuple[date, dict[str, Decimal]]]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
     for key, group in groups.items():
         symbol, basis, source, reference_id, start, end, kind = key
         if kind == "instant":
-            instant_history[(symbol, basis, source)].append((end, group["publication_date"], group["metrics"]))
-    for history in instant_history.values():
-        history.sort(key=lambda x: (x[0], x[1]))
+            instant_candidates[(symbol, basis, source)][end].append(
+                (group["publication_date"], group["metrics"])
+            )
+
+    instant_history: dict[tuple, list[tuple[date, date, dict[str, Decimal]]]] = defaultdict(list)
+    for history_key, by_date in instant_candidates.items():
+        for snapshot_date, candidates in by_date.items():
+            # Most complete snapshot is applied last; the latest publication
+            # wins only when completeness is equal.
+            candidates.sort(key=lambda item: (len(item[1]), item[0]))
+            merged_metrics: dict[str, Decimal] = {}
+            latest_publication = max(publication for publication, _ in candidates)
+            for _publication, values in candidates:
+                merged_metrics.update(values)
+            instant_history[history_key].append(
+                (snapshot_date, latest_publication, merged_metrics)
+            )
+        instant_history[history_key].sort(key=lambda item: (item[0], item[1]))
 
     raw: list[dict] = []
     for key, group in groups.items():
@@ -97,7 +135,7 @@ def normalize_financial_observations(observations: Iterable[FinancialObservation
         instant = instants.get((symbol, basis, source, reference_id, end), {})
         revenue = _pick(flow, "revenue_from_operations", "total_income")
         pbt = flow.get("profit_before_tax")
-        pat = _pick(flow, "profit_after_tax_attributable_to_owners", "profit_after_tax_total")
+        pat = _pick(flow, "profit_after_tax_attributable_to_owners", "profit_after_tax_total", "profit_after_tax")
         finance_cost = flow.get("finance_costs")
         depreciation = flow.get("depreciation_amortisation")
         ebit = pbt + finance_cost if pbt is not None and finance_cost is not None else None
@@ -110,7 +148,9 @@ def normalize_financial_observations(observations: Iterable[FinancialObservation
                 debt = current + noncurrent
         cash = instant.get("cash_and_cash_equivalents")
         net_debt = debt - cash if debt is not None and cash is not None else None
-        equity, assets = instant.get("total_equity"), instant.get("total_assets")
+        assets = instant.get("total_assets")
+        liabilities = instant.get("total_liabilities")
+        equity, equity_method = _equity_from_instant(instant)
         current_assets, current_liabilities = instant.get("current_assets"), instant.get("current_liabilities")
         cfo, capex = flow.get("net_cash_from_operating_activities"), flow.get("capital_expenditure")
         fcf = cfo - abs(capex) if cfo is not None and capex is not None else None
@@ -121,9 +161,22 @@ def normalize_financial_observations(observations: Iterable[FinancialObservation
             if snap_date < end and 330 <= (end - snap_date).days <= 400
         ]
         prior = max(prior_snapshots, key=lambda x: (x[0], x[1]))[2] if prior_snapshots else {}
-        prior_equity, prior_assets = prior.get("total_equity"), prior.get("total_assets")
+        prior_equity, prior_equity_method = _equity_from_instant(prior)
+        prior_assets = prior.get("total_assets")
         avg_equity = (equity + prior_equity) / 2 if equity is not None and prior_equity is not None else None
         avg_assets = (assets + prior_assets) / 2 if assets is not None and prior_assets is not None else None
+        prior_deposits = prior.get("bank_deposits")
+        prior_advances = prior.get("bank_advances")
+        deposit_growth_yoy = (
+            instant.get("bank_deposits") / prior_deposits - D("1")
+            if instant.get("bank_deposits") is not None and prior_deposits is not None and prior_deposits > 0
+            else None
+        )
+        advance_growth_yoy = (
+            instant.get("bank_advances") / prior_advances - D("1")
+            if instant.get("bank_advances") is not None and prior_advances is not None and prior_advances > 0
+            else None
+        )
 
         factor = {
             "quarter": D("4"), "half_year": D("2"),
@@ -152,8 +205,14 @@ def normalize_financial_observations(observations: Iterable[FinancialObservation
             "cfo_to_pat": safe_div(cfo, pat),
             "total_assets": assets,
             "total_equity": equity,
-            "total_liabilities": instant.get("total_liabilities"),
+            "total_equity_derivation": equity_method,
+            "total_liabilities": liabilities,
             "cash_and_cash_equivalents": cash,
+            "bank_share_capital": instant.get("bank_share_capital"),
+            "bank_reserves_and_surplus": instant.get("bank_reserves_and_surplus"),
+            "bank_cash_and_rbi_balances": instant.get("bank_cash_and_rbi_balances"),
+            "bank_balances_with_other_banks": instant.get("bank_balances_with_other_banks"),
+            "bank_investments": instant.get("bank_investments"),
             "total_debt": debt,
             "net_debt": net_debt,
             "debt_to_equity": safe_div(debt, equity),
@@ -171,14 +230,29 @@ def normalize_financial_observations(observations: Iterable[FinancialObservation
             "interest_expended": flow.get("interest_expended"),
             "bank_deposits": instant.get("bank_deposits"),
             "bank_advances": instant.get("bank_advances"),
+            "bank_advances_to_deposits": safe_div(instant.get("bank_advances"), instant.get("bank_deposits")),
+            "bank_deposit_growth_yoy": deposit_growth_yoy,
+            "bank_advances_growth_yoy": advance_growth_yoy,
             "gross_npa": instant.get("gross_npa"),
             "net_npa": instant.get("net_npa"),
             "provisions_against_npa": instant.get("provisions_against_npa"),
             "risk_weighted_assets": instant.get("risk_weighted_assets"),
         }
-        required = ("revenue","profit_before_tax","profit_after_tax","total_assets","total_equity",
-                    "operating_cash_flow","capital_expenditure_outflow","cash_and_cash_equivalents",
-                    "total_debt","annualised_ebitda")
+        bank_like = (
+            metrics.get("net_interest_income") is not None
+            or (metrics.get("bank_deposits") is not None and metrics.get("bank_advances") is not None)
+        )
+        if bank_like:
+            required = (
+                "profit_after_tax", "total_assets", "total_equity",
+                "net_interest_income", "bank_deposits", "bank_advances",
+            )
+        else:
+            required = (
+                "revenue","profit_before_tax","profit_after_tax","total_assets","total_equity",
+                "operating_cash_flow","capital_expenditure_outflow","cash_and_cash_equivalents",
+                "total_debt","annualised_ebitda",
+            )
         missing = tuple(metric for metric in required if metrics.get(metric) is None)
         completeness = D(len(required)-len(missing))/D(len(required))
         raw.append({
@@ -229,20 +303,46 @@ def build_company_fundamentals(
         notes.append("No financial period available for this issuer/basis.")
         return CompanyFundamentals(symbol,basis,sector,None,annual,quarters,None,None,None,ZERO,None,"",None,tuple(notes))
     m=latest.metrics
-    margins=[v for v in (m.get("ebitda_margin"),m.get("pat_margin")) if v is not None]
-    profitability=_clip(D("50")+sum(margins,ZERO)/D(len(margins))*D("200")) if margins else None
+    bank_like = "bank" in sector.casefold() or m.get("net_interest_income") is not None
     growths=[v for v in (m.get("revenue_growth_yoy"),m.get("pat_growth_yoy")) if v is not None]
     growth=_clip(D("50")+sum(growths,ZERO)/D(len(growths))*D("150")) if growths else None
-    balance_parts=[]
-    if m.get("current_ratio") is not None: balance_parts.append(_clip(m["current_ratio"]/D("2")*D("100")))
-    if m.get("debt_to_equity") is not None: balance_parts.append(_clip(D("100")-m["debt_to_equity"]*D("50")))
-    if m.get("equity_to_assets") is not None: balance_parts.append(_clip(m["equity_to_assets"]*D("100")))
-    balance=sum(balance_parts,ZERO)/D(len(balance_parts)) if balance_parts else None
+    if bank_like:
+        roe = m.get("return_on_equity")
+        profitability = _clip(D("50") + roe * D("200")) if roe is not None else None
+        # Only a disclosed equity/assets proxy and the loans/deposits ratio are
+        # used here. Regulatory CET1/CRAR and NPA ratios remain explicit gaps.
+        balance_parts=[]
+        if m.get("equity_to_assets") is not None:
+            balance_parts.append(_clip(m["equity_to_assets"] / D("0.15") * D("100")))
+        if m.get("bank_advances_to_deposits") is not None:
+            ldr=m["bank_advances_to_deposits"]
+            balance_parts.append(_clip(D("100") - abs(ldr-D("0.85"))*D("180")))
+        balance=sum(balance_parts,ZERO)/D(len(balance_parts)) if balance_parts else None
+        if m.get("gross_npa") is None or m.get("net_npa") is None:
+            notes.append("Bank asset-quality review is incomplete: gross/net NPA and provision coverage are not mapped.")
+        if m.get("risk_weighted_assets") is None:
+            notes.append("Regulatory CRAR/CET1 cannot be calculated because risk-weighted assets are not mapped.")
+    else:
+        margins=[v for v in (m.get("ebitda_margin"),m.get("pat_margin")) if v is not None]
+        profitability=_clip(D("50")+sum(margins,ZERO)/D(len(margins))*D("200")) if margins else None
+        balance_parts=[]
+        if m.get("current_ratio") is not None: balance_parts.append(_clip(m["current_ratio"]/D("2")*D("100")))
+        if m.get("debt_to_equity") is not None: balance_parts.append(_clip(D("100")-m["debt_to_equity"]*D("50")))
+        if m.get("equity_to_assets") is not None: balance_parts.append(_clip(m["equity_to_assets"]*D("100")))
+        balance=sum(balance_parts,ZERO)/D(len(balance_parts)) if balance_parts else None
     if len(annual)<3: notes.append("Fewer than three annual periods: normalised cycle confidence is limited.")
     if m.get("return_on_equity") is None: notes.append("ROE unavailable: prior-year balance-sheet equity is missing.")
-    if m.get("free_cash_flow_to_equity_proxy") is None: notes.append("FCF unavailable: operating cash flow or capex is missing.")
+    if not bank_like and m.get("free_cash_flow_to_equity_proxy") is None: notes.append("FCF unavailable: operating cash flow or capex is missing.")
+    if m.get("total_equity_derivation") not in (None, "reported_equity"):
+        notes.append(f"Book equity is a derived accounting residual ({m.get('total_equity_derivation')}); verify before using book-value multiples.")
     notes.append("Automated financial scores are not a governance, management or qualitative thesis assessment.")
+    bank_like = "bank" in sector.casefold() or m.get("net_interest_income") is not None
+    if bank_like:
+        bank_required=("profit_after_tax","total_assets","total_equity","net_interest_income","bank_deposits","bank_advances")
+        company_completeness = D(sum(1 for name in bank_required if m.get(name) is not None))/D(len(bank_required))
+    else:
+        company_completeness = latest.completeness
     return CompanyFundamentals(
         symbol,basis,sector,latest,annual,quarters,growth,balance,profitability,
-        latest.completeness,latest.publication_date,latest.source_name,latest.source_url,tuple(notes),
+        company_completeness,latest.publication_date,latest.source_name,latest.source_url,tuple(notes),
     )

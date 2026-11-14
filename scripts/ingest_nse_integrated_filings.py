@@ -7,7 +7,7 @@ import json
 import sqlite3
 import sys
 import time
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -60,7 +60,7 @@ INSTANT_METRIC_MAP = {
     "total_assets": (("Assets", "TotalAssets"), "INR crore"),
     "total_equity": (("EquityAttributableToOwnersOfParent", "Equity"), "INR crore"),
     "total_liabilities": (("Liabilities",), "INR crore"),
-    "cash_and_cash_equivalents": (("CashAndCashEquivalents", "CashAndCashEquivalentsAndBankBalances"), "INR crore"),
+    "cash_and_cash_equivalents": (("CashAndCashEquivalents", "CashAndCashEquivalentsAndBankBalances", "CashAndCashEquivalentsCashFlowStatement"), "INR crore"),
     "borrowings": (("Borrowings", "BorrowingsCurrentAndNonCurrent"), "INR crore"),
     "current_assets": (("CurrentAssets", "TotalCurrentAssets"), "INR crore"),
     "current_liabilities": (("CurrentLiabilities", "TotalCurrentLiabilities"), "INR crore"),
@@ -68,12 +68,17 @@ INSTANT_METRIC_MAP = {
     "trade_receivables": (("TradeReceivables",), "INR crore"),
     "trade_payables": (("TradePayables",), "INR crore"),
     "current_borrowings": (("CurrentBorrowings", "BorrowingsCurrent", "ShortTermBorrowings"), "INR crore"),
-    "non_current_borrowings": (("NoncurrentBorrowings", "BorrowingsNonCurrent", "LongTermBorrowings"), "INR crore"),
+    "non_current_borrowings": (("BorrowingsNoncurrent", "NoncurrentBorrowings", "BorrowingsNonCurrent", "LongTermBorrowings"), "INR crore"),
     "bank_deposits": (("Deposits", "DepositsFromCustomers"), "INR crore"),
     "bank_advances": (("Advances", "LoansAndAdvancesToCustomers"), "INR crore"),
     "gross_npa": (("GrossNonPerformingAssets", "GrossNPA"), "INR crore"),
     "net_npa": (("NetNonPerformingAssets", "NetNPA"), "INR crore"),
     "provisions_against_npa": (("ProvisionsForNonPerformingAssets", "ProvisionForNPA"), "INR crore"),
+    "bank_share_capital": (("Capital",), "INR crore"),
+    "bank_reserves_and_surplus": (("ReservesAndSurplus",), "INR crore"),
+    "bank_cash_and_rbi_balances": (("CashAndBalancesWithReserveBankOfIndia",), "INR crore"),
+    "bank_balances_with_other_banks": (("BalancesWithBanksAndMoneyAtCallAndShortNotice",), "INR crore"),
+    "bank_investments": (("Investments",), "INR crore"),
     "risk_weighted_assets": (("RiskWeightedAssets",), "INR crore"),
 }
 DURATION_METRIC_MAP = {k: v for k, v in METRIC_MAP.items() if k not in INSTANT_METRIC_MAP}
@@ -236,33 +241,81 @@ def extract_observations(
         ))
         used_tags[metric] = tag
 
-    # Balance-sheet facts are instant-date facts, not duration flows.
+    # Balance-sheet facts are instant-date facts, not duration flows. Import
+    # both the reporting-date snapshot and a prior-year comparative when the
+    # filing supplies them. This allows average-balance ROE/ROA without mixing
+    # a closing balance sheet with a flow period.
     instant_used_tags: dict[str, str] = {}
     instant_context_id = ""
     instant_warning = ""
     instant_preferred_tags = tuple(
         tag for aliases, _unit in INSTANT_METRIC_MAP.values() for tag in aliases
     )
-    try:
-        instant_context_id, instant_date = choose_instant_context(
-            contexts, end_date, facts, instant_preferred_tags
-        )
+    instant_dates: set[date] = set()
+    minimum_comparative_date = end_date - timedelta(days=800)
+    for candidate in contexts.values():
+        if candidate.get("type") not in (None, "instant"):
+            continue
+        raw_instant = candidate.get("instant") or candidate.get("instant_date")
+        if raw_instant in (None, ""):
+            continue
+        try:
+            candidate_date = parse_iso_or_nse(raw_instant)
+        except (TypeError, ValueError):
+            continue
+        if minimum_comparative_date <= candidate_date <= end_date:
+            instant_dates.add(candidate_date)
+
+    instant_contexts_by_date: dict[str, dict[str, Any]] = {}
+    instant_warnings: list[str] = []
+    for selected_date in sorted(instant_dates):
+        try:
+            selected_context_id, selected_instant_date = choose_instant_context(
+                contexts, selected_date, facts, instant_preferred_tags
+            )
+        except ValueError as instant_error:
+            instant_warnings.append(f"{selected_date}: {instant_error}")
+            continue
+
         instant_period = FinancialPeriod(
-            start_date=instant_date, end_date=instant_date, kind="instant",
-            basis=basis, annualisation_factor=Decimal("1"),
+            start_date=selected_instant_date,
+            end_date=selected_instant_date,
+            kind="instant",
+            basis=basis,
+            annualisation_factor=Decimal("1"),
         )
+        date_tags: dict[str, str] = {}
         for metric, (aliases, unit) in INSTANT_METRIC_MAP.items():
-            raw, tag = decimal_fact(facts, aliases, instant_context_id)
+            raw, tag = decimal_fact(facts, aliases, selected_context_id)
             if raw is None or tag is None:
                 continue
             value = raw / CRORE if unit == "INR crore" else raw
             observations.append(FinancialObservation(
-                symbol=symbol, metric=metric, value=value, unit=unit, currency="INR",
-                period=instant_period, source=source, observation_kind="reported",
+                symbol=symbol,
+                metric=metric,
+                value=value,
+                unit=unit,
+                currency="INR",
+                period=instant_period,
+                source=source,
+                observation_kind="reported",
             ))
-            instant_used_tags[metric] = tag
-    except ValueError as instant_error:
-        instant_warning = str(instant_error)
+            date_tags[metric] = tag
+        instant_contexts_by_date[selected_instant_date.isoformat()] = {
+            "context_id": selected_context_id,
+            "metrics": date_tags,
+        }
+        if selected_instant_date == end_date:
+            instant_context_id = selected_context_id
+            instant_used_tags = date_tags
+
+    if not instant_context_id:
+        instant_warning = (
+            f"No mapped instant balance-sheet context ending {end_date}."
+            + (" " + "; ".join(instant_warnings) if instant_warnings else "")
+        )
+    else:
+        instant_warning = "; ".join(instant_warnings)
 
     # Derived bank net interest income is kept separate and explicitly tagged calculated.
     earned = next((o.value for o in observations if o.metric == "interest_earned"), None)
@@ -297,6 +350,8 @@ def extract_observations(
         "metrics": sorted(o.metric for o in observations),
         "duration_metrics": sorted(used_tags),
         "instant_metrics": sorted(instant_used_tags),
+        "instant_contexts_by_date": instant_contexts_by_date,
+        "instant_snapshot_dates": sorted(instant_contexts_by_date),
         "source_tags": used_tags,
         "instant_source_tags": instant_used_tags,
         "context_id": context_id,

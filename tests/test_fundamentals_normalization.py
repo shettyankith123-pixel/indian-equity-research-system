@@ -4,9 +4,9 @@ from indian_equity_research.models.financials import FinancialObservation,Financ
 from indian_equity_research.analytics.fundamentals import normalize_financial_observations,build_company_fundamentals
 
 
-def add(rows,metric,value,start,end,kind):
+def add(rows,metric,value,start,end,kind,reference="ref"):
  period=FinancialPeriod(date.fromisoformat(start),date.fromisoformat(end),kind,"consolidated",D("1"))
- source=SourceReference("NSE","exchange_filing",date.fromisoformat(end),datetime(2026,11,14,tzinfo=timezone.utc),"https://example.com/xbrl","ref")
+ source=SourceReference("NSE","exchange_filing",date.fromisoformat(end),datetime(2026,11,14,tzinfo=timezone.utc),"https://example.com/xbrl",reference)
  rows.append(FinancialObservation("TEST",metric,D(str(value)),"INR crore","INR",period,source))
 
 
@@ -57,3 +57,78 @@ def test_company_data_notes_expose_history_limit():
  c=build_company_fundamentals(periods,symbol="TEST",sector="Industrials")
  assert len(c.annual_periods)==2
  assert any("Fewer than three" in n for n in c.notes)
+
+
+
+def test_bank_equity_is_derived_from_capital_and_reserves_and_roes_are_computed():
+ rows=[]
+ # Prior-year instant snapshot.
+ for metric,value in [
+  ("total_assets",4200),("bank_share_capital",40),("bank_reserves_and_surplus",360),
+  ("bank_deposits",2600),("bank_advances",2300),("cash_and_cash_equivalents",180),
+ ]:
+  add(rows,metric,value,"2025-09-30","2025-09-30","instant")
+ for metric,value in [
+  ("total_income",100),("profit_before_tax",28),("profit_after_tax_total",20),
+  ("net_interest_income",35),
+ ]:
+  add(rows,metric,value,"2025-07-01","2025-09-30","quarter")
+ # Current-year instant snapshot.
+ for metric,value in [
+  ("total_assets",5200),("bank_share_capital",40),("bank_reserves_and_surplus",460),
+  ("bank_deposits",3200),("bank_advances",2900),("cash_and_cash_equivalents",220),
+ ]:
+  add(rows,metric,value,"2026-09-30","2026-09-30","instant")
+ for metric,value in [
+  ("total_income",125),("profit_before_tax",38),("profit_after_tax_total",30),
+  ("net_interest_income",48),
+ ]:
+  add(rows,metric,value,"2026-07-01","2026-09-30","quarter")
+
+ periods=normalize_financial_observations(rows)
+ current=next(p for p in periods if p.period_end==date(2026,9,30) and p.period_kind=="quarter")
+ assert current.metrics["total_equity"]==D("500")
+ assert current.metrics["total_equity_derivation"]=="bank_capital_plus_reserves"
+ assert current.metrics["return_on_equity"]==D("120")/D("450")
+ assert current.metrics["bank_advances_to_deposits"]==D("2900")/D("3200")
+ assert current.metrics["bank_deposit_growth_yoy"]==D("3200")/D("2600")-D("1")
+ company=build_company_fundamentals(periods,symbol="TEST",sector="Banking")
+ assert company.data_completeness==D("1")
+ assert company.profitability_score==D("100")
+ assert company.balance_sheet_score is not None
+ assert any("CRAR/CET1" in note for note in company.notes)
+ assert any("NPA" in note for note in company.notes)
+
+
+def test_mcx_profit_after_tax_source_alias_is_normalized():
+ rows=[]
+ add(rows,"profit_after_tax","454.57","2026-07-01","2026-09-30","quarter")
+ periods=normalize_financial_observations(rows)
+ current=next(p for p in periods if p.period_kind=="quarter")
+ assert current.metrics["profit_after_tax"]==D("454.57")
+
+
+
+def test_same_date_instant_snapshots_merge_facts_across_filings():
+ rows=[]
+ # The FY25 filing contains the full opening bank balance sheet.
+ for metric,value in [
+  ("bank_share_capital",40),("bank_reserves_and_surplus",360),
+  ("total_assets",4200),("bank_deposits",2600),("bank_advances",2200),
+ ]:
+  add(rows,metric,value,"2025-03-31","2025-03-31","instant","FY25")
+ # The FY26 filing carries the same comparative date, but only has cash.
+ add(rows,"cash_and_cash_equivalents",180,"2025-03-31","2025-03-31","instant","FY26")
+ # The FY26 filing has its full closing balance sheet.
+ for metric,value in [
+  ("bank_share_capital",40),("bank_reserves_and_surplus",460),
+  ("total_assets",5200),("bank_deposits",3200),("bank_advances",2900),
+ ]:
+  add(rows,metric,value,"2026-03-31","2026-03-31","instant","FY26")
+ add(rows,"profit_after_tax_total",90,"2025-04-01","2026-03-31","year","FY26")
+ add(rows,"net_interest_income",150,"2025-04-01","2026-03-31","year","FY26")
+ periods=normalize_financial_observations(rows)
+ current=next(p for p in periods if p.period_kind=="year" and p.period_end==date(2026,3,31))
+ assert current.metrics["total_equity"]==D("500")
+ assert current.metrics["return_on_equity"]==D("90")/D("450")
+ assert current.metrics["bank_deposit_growth_yoy"]==D("3200")/D("2600")-D("1")

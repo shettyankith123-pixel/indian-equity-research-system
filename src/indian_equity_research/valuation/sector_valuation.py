@@ -115,8 +115,20 @@ def value_universe(
             warnings.append("No financial statements available.")
         elif "bank" in sector.casefold() or symbol == "BAJFINANCE":
             roes=[v for v in _annual(company,"return_on_equity") if v>0]
-            equity=own["equity"]
-            if len(roes)>=2 and equity is not None and shares is not None and shares>0:
+            latest=company.latest_period
+            # The latest annual ROE plus an annualised current quarter/half-year
+            # ROE provides two observations when only two annual balance sheets
+            # are currently available. It remains a provisional bank valuation.
+            if (
+                latest is not None
+                and latest.period_kind in {"quarter","half_year"}
+                and latest.metrics.get("return_on_equity") is not None
+                and latest.metrics["return_on_equity"] > 0
+                and all(p.period_end != latest.period_end for p in company.annual_periods)
+            ):
+                roes.append(latest.metrics["return_on_equity"])
+            equity=(latest.metrics.get("total_equity") if latest is not None else None) or own["equity"]
+            if len(roes)>=1 and equity is not None and shares is not None and shares>0:
                 bps=equity/shares
                 roe=min(D(".30"),_median(roes) or ZERO)
                 scenarios=[]
@@ -130,11 +142,18 @@ def value_universe(
                     low,base,high=scenarios
                     checks["justified_pb"]=base
                     method="Justified P/B using sustainable ROE"
-                    model_conf=D(".70")
+                    if len(roes) == 1:
+                        model_conf=D(".45")
+                        warnings.append("Justified P/B uses only one valid annual ROE observation; valuation confidence is reduced pending a longer bank earnings history.")
+                    elif len(company.annual_periods)<2:
+                        model_conf=D(".60")
+                        warnings.append("Bank P/B includes one annual ROE plus a latest annualised quarter/half-year ROE; confidence is reduced.")
+                    else:
+                        model_conf=D(".70")
                 else:
                     warnings.append("Sustainable ROE does not support all P/B scenarios.")
             else:
-                warnings.append("Bank valuation requires at least two annual ROE observations and current book value per share.")
+                warnings.append("Bank valuation requires at least one valid annual ROE observation and current book value per share.")
         else:
             fcfs=[v for v in _annual(company,"free_cash_flow_to_equity_proxy") if v>0]
             if len(fcfs)>=2 and shares is not None and shares>0:

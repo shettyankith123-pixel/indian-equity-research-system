@@ -386,3 +386,24 @@ The sector valuation layer was further refined:
 - Bajaj Finance (NBFC) uses the justified P/B sensitivity from sustainable ROE and book value per share rather than the industrial cash-flow DCF.
 - Fee-based/market-infrastructure companies classified under the broad Financial Services sector (e.g. HDFC AMC, CAMS, CDSL, BSE, MCX and Anand Rathi) do not use cross-peer P/E or EV/EBITDA until a defensible sub-sector peer map exists. Their FCFE-style DCF may be used only when their own annual cash-flow history supports it.
 - Regression tests verify both rules.
+
+
+## 11. Bank taxonomy, comparable balance sheets and valuation screening — 14 November 2026
+
+**Status: Implemented locally; 33 focused tests pass; awaiting GitHub CI and refreshed 64-company import**
+
+The latest integrated Wealth Scan run (43577777470) successfully generated 64 company reports and 49 provisional fair values, but the source audit found that NSE banking filings use a different balance-sheet taxonomy from non-financial companies. Direct inspection of ICICI Bank and SBI Q2 FY27 XML established these mappings:
+- The NSE concepts Capital and ReservesAndSurplus are the bank's reported share capital and reserves; these are explicitly combined to derive book equity.
+- Deposits, Advances, Borrowings, CashAndBalancesWithReserveBankOfIndia, BalancesWithBanksAndMoneyAtCallAndShortNotice, Investments and CashAndCashEquivalentsCashFlowStatement are mapped as separate instant balance-sheet facts.
+- Corporate non-current debt uses the exact concept BorrowingsNoncurrent; this capitalization is now mapped.
+- Average-balance ROE/ROA uses prior-year and current instant snapshots. If two filings carry the same instant date but one comparative has fewer facts, the normalizer merges the richer snapshot with the other disclosed facts rather than choosing a newer but incomplete cash-only comparative.
+- Bank-specific completeness uses PAT, total assets, derived book equity, NII, deposits and advances, rather than industrial CFO/capex and debt fields. Deposit and advances growth and loans-to-deposits are separate metrics. GNPA/NNPA, provision coverage and regulatory CRAR/CET1 remain explicit review gaps where facts are not mapped.
+- Justified P/B may produce a provisional scenario with one valid annual ROE, but it is assigned lower confidence and a visible one-year-history warning. It is not a BUY/ACCUMULATE recommendation.
+- MCX's separate profit_after_tax source field is now recognized by the normalizer.
+- valuation_opportunity_screen.csv provides a separate valuation-only signal and 15%/8% price entry ceilings; it is not an investment recommendation.
+
+**Live validation:** ICICI Bank FY26 annual ROE = 15.31%; SBI FY26 annual ROE = 14.88%, both calculated from FY26 PAT and the FY25/FY26 average equity snapshots. Their bank deposits growth also calculates from the two annual snapshots. These are parser/normalizer smoke tests on NSE-published filings, not final investment ratings.
+
+**Tests:** Python compilation passed; 33 focused tests passed across normalization, valuation, bank taxonomy aliases, valuation screening, XBRL context selection and CSV ingestion.
+
+**Next required operation:** one new full-64 financial import is necessary to populate the corrected instant bank facts and BorrowingsNoncurrent in the run database. The previous 11,887-observation artifact remains preserved; it must not be overwritten. Then rerun WEALTH SCAN against the new database and inspect the bank valuations and debt/leverage changes.

@@ -46,7 +46,24 @@ jobs:
       - name: Install research CLI
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
+          pip install -e ".[financials]"
+
+      - name: Download latest validated financial database and build research registers
+        if: inputs.command != 'market-brief' && inputs.command != 'portfolio-review'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python scripts/download_latest_financial_artifact.py \
+            --repo "$GITHUB_REPOSITORY" \
+            --token "$GITHUB_TOKEN"
+          FINANCIAL_DB="$(python -c 'import json; print(json.load(open("data/financials/latest_64_run.json", encoding="utf-8"))["database_path"])')"
+          python scripts/build_research_reports.py \
+            --db "$FINANCIAL_DB" \
+            --market-snapshot data/imports/indmoney_market_snapshot_2026-11-14.csv \
+            --universe data/universe/indian_watchlist_companies.csv \
+            --holdings-snapshot data/imports/indmoney_holdings_snapshot_2026-11-13.csv \
+            --output-dir reports/commands/research-build
 
       - name: Run requested research command
         env:
@@ -68,21 +85,21 @@ jobs:
             wealth-scan)
               ies wealth-scan \
                 --watchlist config/watchlists/indian_watchlist.yaml \
-                --research-inputs data/templates/research_inputs.csv \
+                --research-inputs reports/commands/research-build/research_inputs.csv \
                 --output-dir reports/commands/wealth-scan \
                 --db data/research.db
               ;;
             company-scan)
               if [ -z "$SYMBOL" ]; then echo "symbol is required for company-scan"; exit 2; fi
               ies company-scan "$SYMBOL" \
-                --research-inputs data/templates/research_inputs.csv \
+                --research-inputs reports/commands/research-build/research_inputs.csv \
                 --universe data/universe/indian_watchlist_companies.csv \
                 | tee reports/commands/company-scan.json
               ;;
             sector-scan)
               if [ -z "$SECTOR" ]; then echo "sector is required for sector-scan"; exit 2; fi
               ies sector-scan --sector "$SECTOR" \
-                --research-inputs data/templates/research_inputs.csv \
+                --research-inputs reports/commands/research-build/research_inputs.csv \
                 --universe data/universe/indian_watchlist_companies.csv \
                 | tee reports/commands/sector-scan.json
               ;;
@@ -95,7 +112,7 @@ jobs:
             find-opportunities)
               ies opportunity-scan \
                 --watchlist config/watchlists/indian_watchlist.yaml \
-                --research-inputs data/templates/research_inputs.csv \
+                --research-inputs reports/commands/research-build/research_inputs.csv \
                 --output reports/commands/opportunities.csv
               ;;
             *)
@@ -111,6 +128,7 @@ jobs:
           name: research-command-${{ inputs.command }}-${{ github.run_id }}
           path: |
             reports/commands/
+            data/financials/latest_64_run.json
             data/market/
           if-no-files-found: warn
           retention-days: 30

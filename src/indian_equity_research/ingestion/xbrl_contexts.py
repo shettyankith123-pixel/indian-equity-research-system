@@ -142,3 +142,29 @@ def period_kind_for_target(
     if start >= end:
         raise ValueError("transition_period_start must be before transition_period_end")
     return "transition_period" if target_end == end else default_kind
+
+
+def choose_instant_context(contexts, expected_instant, facts=None, preferred_tags=()):
+    # Select an exact-date instant context with the highest number of mapped facts.
+    candidates = []
+    for context_id, context in contexts.items():
+        if context.get("type") not in (None, "instant"):
+            continue
+        instant = parse_iso_or_nse(context.get("instant") or context.get("instant_date"))
+        if instant != expected_instant:
+            continue
+        count = 0
+        if facts and preferred_tags:
+            count = sum(1 for tag in preferred_tags if facts.get(tag, {}).get(context_id) not in (None, ""))
+        candidates.append((count, context_id, instant))
+    if not candidates:
+        available = sorted({
+            str(c.get("instant")) for c in contexts.values()
+            if c.get("type") == "instant" and c.get("instant") is not None
+        })
+        raise ValueError(f"no instant context ending {expected_instant}; available_instant_dates={available[:30]}")
+    candidates.sort(key=lambda item: (-item[0], item[1]))
+    count, context_id, instant = candidates[0]
+    if facts and preferred_tags and count == 0:
+        raise ValueError(f"no mapped balance-sheet facts in instant contexts ending {expected_instant}")
+    return context_id, instant

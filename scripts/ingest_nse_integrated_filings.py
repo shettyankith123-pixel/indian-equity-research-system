@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from nse_xbrl import NSEClient, parse_xbrl
-from indian_equity_research.ingestion.xbrl_contexts import parse_iso_or_nse, choose_duration_context, create_run_directory, period_kind_for_target
+from indian_equity_research.ingestion.xbrl_contexts import parse_iso_or_nse, choose_duration_context, create_run_directory, period_kind_for_target, choose_instant_context
 
 from indian_equity_research.models.financials import (
     FinancialObservation,
@@ -54,6 +54,29 @@ METRIC_MAP: dict[str, tuple[tuple[str, ...], str]] = {
     "net_cash_from_operating_activities": (("NetCashFlowsFromUsedInOperatingActivities", "NetCashFlowsFromOperatingActivities", "CashFlowsFromUsedInOperatingActivities"), "INR crore"),
     "capital_expenditure": (("PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities", "PurchaseOfPropertyPlantAndEquipment"), "INR crore"),
 }
+
+
+INSTANT_METRIC_MAP = {
+    "total_assets": (("Assets", "TotalAssets"), "INR crore"),
+    "total_equity": (("EquityAttributableToOwnersOfParent", "Equity"), "INR crore"),
+    "total_liabilities": (("Liabilities",), "INR crore"),
+    "cash_and_cash_equivalents": (("CashAndCashEquivalents", "CashAndCashEquivalentsAndBankBalances"), "INR crore"),
+    "borrowings": (("Borrowings", "BorrowingsCurrentAndNonCurrent"), "INR crore"),
+    "current_assets": (("CurrentAssets", "TotalCurrentAssets"), "INR crore"),
+    "current_liabilities": (("CurrentLiabilities", "TotalCurrentLiabilities"), "INR crore"),
+    "inventories": (("Inventories",), "INR crore"),
+    "trade_receivables": (("TradeReceivables",), "INR crore"),
+    "trade_payables": (("TradePayables",), "INR crore"),
+    "current_borrowings": (("CurrentBorrowings", "BorrowingsCurrent", "ShortTermBorrowings"), "INR crore"),
+    "non_current_borrowings": (("NoncurrentBorrowings", "BorrowingsNonCurrent", "LongTermBorrowings"), "INR crore"),
+    "bank_deposits": (("Deposits", "DepositsFromCustomers"), "INR crore"),
+    "bank_advances": (("Advances", "LoansAndAdvancesToCustomers"), "INR crore"),
+    "gross_npa": (("GrossNonPerformingAssets", "GrossNPA"), "INR crore"),
+    "net_npa": (("NetNonPerformingAssets", "NetNPA"), "INR crore"),
+    "provisions_against_npa": (("ProvisionsForNonPerformingAssets", "ProvisionForNPA"), "INR crore"),
+    "risk_weighted_assets": (("RiskWeightedAssets",), "INR crore"),
+}
+DURATION_METRIC_MAP = {k: v for k, v in METRIC_MAP.items() if k not in INSTANT_METRIC_MAP}
 
 FLOW_METRICS = {
     "revenue_from_operations", "total_income", "other_income", "total_expenses",
@@ -113,7 +136,7 @@ def extract_observations(
     facts = parsed.get("facts") or {}
     contexts = parsed.get("contexts") or {}
     preferred_tags = tuple(
-        tag for aliases, _unit in METRIC_MAP.values() for tag in aliases
+        tag for aliases, _unit in DURATION_METRIC_MAP.values() for tag in aliases
     )
     stored_period_kind = period_kind
     try:
@@ -121,15 +144,27 @@ def extract_observations(
             contexts, expected_end, period_kind, facts, preferred_tags
         )
     except ValueError as primary_error:
-        if period_kind != "year":
+        if period_kind == "year":
+            try:
+                context_id, start_date, end_date = choose_duration_context(
+                    contexts, expected_end, "transition_period", facts, preferred_tags
+                )
+                stored_period_kind = "transition_period"
+            except ValueError:
+                raise primary_error
+        elif period_kind == "transition_period":
+            # The filer may supply only the 12-month current-year comparative.
+            # Import the reported year as a year and preserve the missing transition
+            # interval as an explicit coverage exception; do not annualise it as 18 months.
+            try:
+                context_id, start_date, end_date = choose_duration_context(
+                    contexts, expected_end, "year", facts, preferred_tags
+                )
+                stored_period_kind = "year"
+            except ValueError:
+                raise primary_error
+        else:
             raise
-        try:
-            context_id, start_date, end_date = choose_duration_context(
-                contexts, expected_end, "transition_period", facts, preferred_tags
-            )
-            stored_period_kind = "transition_period"
-        except ValueError:
-            raise primary_error
 
     span_days = (end_date - start_date).days + 1
     if stored_period_kind == "quarter" and span_days > 140:
@@ -179,7 +214,7 @@ def extract_observations(
     observations: list[FinancialObservation] = []
     used_tags: dict[str, str] = {}
 
-    for metric, (aliases, unit) in METRIC_MAP.items():
+    for metric, (aliases, unit) in DURATION_METRIC_MAP.items():
         raw, tag = decimal_fact(facts, aliases, context_id)
         if raw is None or tag is None:
             continue
@@ -200,6 +235,34 @@ def extract_observations(
             observation_kind="reported",
         ))
         used_tags[metric] = tag
+
+    # Balance-sheet facts are instant-date facts, not duration flows.
+    instant_used_tags: dict[str, str] = {}
+    instant_context_id = ""
+    instant_warning = ""
+    instant_preferred_tags = tuple(
+        tag for aliases, _unit in INSTANT_METRIC_MAP.values() for tag in aliases
+    )
+    try:
+        instant_context_id, instant_date = choose_instant_context(
+            contexts, end_date, facts, instant_preferred_tags
+        )
+        instant_period = FinancialPeriod(
+            start_date=instant_date, end_date=instant_date, kind="instant",
+            basis=basis, annualisation_factor=Decimal("1"),
+        )
+        for metric, (aliases, unit) in INSTANT_METRIC_MAP.items():
+            raw, tag = decimal_fact(facts, aliases, instant_context_id)
+            if raw is None or tag is None:
+                continue
+            value = raw / CRORE if unit == "INR crore" else raw
+            observations.append(FinancialObservation(
+                symbol=symbol, metric=metric, value=value, unit=unit, currency="INR",
+                period=instant_period, source=source, observation_kind="reported",
+            ))
+            instant_used_tags[metric] = tag
+    except ValueError as instant_error:
+        instant_warning = str(instant_error)
 
     # Derived bank net interest income is kept separate and explicitly tagged calculated.
     earned = next((o.value for o in observations if o.metric == "interest_earned"), None)
@@ -232,8 +295,17 @@ def extract_observations(
         "xbrl_sha256": sha,
         "observation_count": len(observations),
         "metrics": sorted(o.metric for o in observations),
+        "duration_metrics": sorted(used_tags),
+        "instant_metrics": sorted(instant_used_tags),
         "source_tags": used_tags,
+        "instant_source_tags": instant_used_tags,
         "context_id": context_id,
+        "instant_context_id": instant_context_id or None,
+        "instant_warning": instant_warning,
+        "transition_period_note": (
+            "Expected longer transition interval was not present; only the available 12-month annual context was imported."
+            if period_kind == "transition_period" and stored_period_kind == "year" else ""
+        ),
     }
     return observations, summary
 

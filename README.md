@@ -12,7 +12,10 @@ A private, evidence-led research platform for Indian equities, built for a **mod
 
 ## Current capabilities
 
-- Financial observation model with source, period, basis and publication provenance.
+- Financial observation model with source, period, basis and publication provenance, including separate instant-date balance-sheet facts.
+- Source-aware financial normalization for margins, YoY growth, cash conversion, FCF proxies, leverage, liquidity, ROE/ROA and bank asset-quality inputs.
+- Sector-aware scenario valuation: bank justified P/B; non-bank cash-flow DCF with P/E and EV/EBITDA cross-checks when enough peer evidence exists.
+- Automated report builder for financial histories, valuation ranges, assumptions, confidence and research-input registers across the 64-stock universe.
 - CSV financial-statement ingestion and SQLite persistence.
 - Bank financial ratio calculations and growth analytics.
 - NSE UDiFF official EOD bhavcopy ZIP downloader/parser, SQLite market-price store and EOD equity breadth/leader-laggard market scan.
@@ -32,7 +35,7 @@ Python 3.11+ is recommended.
 python -m venv .venv
 # Windows: .venv\\Scripts\\activate
 # macOS/Linux: source .venv/bin/activate
-pip install -e .[dev]
+pip install -e ".[dev,financials]"
 pytest
 ```
 
@@ -68,11 +71,11 @@ ies company-scan ICICIBANK
 ies sector-scan --sector banking
 ```
 
-These commands analyse imported, reviewed research inputs. They do not fetch or invent company financials on their own.
+The GitHub Research Command workflow retrieves the latest successful full-universe financial artifact, validates 64 unique issuer rows and the MCX BSE source fallback, builds current research registers, and then runs the selected command. Financial statements do not bypass the separate governance/qualitative review gate.
 
 ### Generate the Wealth Scan decision register
 
-Populate `data/templates/research_inputs.csv` with reviewed data, source references and scores (score fields are 0–100; completeness and valuation confidence are 0–1), then run:
+The connected GitHub Research Command workflow retrieves the latest validated 64-stock financial database, builds the financial history and sector valuation registers, and generates research inputs before running WEALTH SCAN. Dispatch the wealth-scan action in GitHub Actions or use the connected ChatGPT conversation command. Manual local mode remains available when you have reviewed inputs:
 
 ```bash
 ies wealth-scan
@@ -122,10 +125,10 @@ GitHub Actions runs the NSE EOD fetch on weekdays at 18:15 India time and retain
 ## Current integration boundaries
 
 - INDmoney holdings can be read in the connected ChatGPT session, but private account sync is not configured inside GitHub Actions. Historical trade reconstruction still requires a user-exported transaction CSV; never put broker credentials in Git.
-- NSE Integrated Filing XBRL ingestion has been implemented and tested on selected issuers. The full 64-company import must be revalidated after the latest parser corrections; partial filing/metric coverage remains possible.
-- Financial statements do not automatically produce fair values. Sector-specific valuation and qualitative governance review must pass before actionable BUY/ACCUMULATE decisions are issued.
+- NSE Integrated Filing XBRL ingestion supports separate duration and instant contexts. The last verified full-universe baseline (before the instant-context fix) covered 63 of 64 issuers and requires a fresh full run after the latest parser corrections.
+- Sector-specific fair values are provisional outputs with disclosed assumptions. Manual governance, management-quality and qualitative thesis review remains required before BUY/ACCUMULATE can be emitted; missing review fields deliberately keep recommendations at ASSESS.
 - Automated news ingestion, AI model endpoints, corporate-action-adjusted historical prices, BSE feeds, benchmark-relative event studies and hosted persistent storage remain outstanding.
-- The full Wealth Scan schedule is intentionally not enabled until the full data and valuation gates pass. On-demand command execution is available through the Research Command GitHub Actions workflow.
+- The full Wealth Scan schedule is intentionally not enabled until the full data and valuation gates pass. On-demand command execution is available through the Research Command GitHub Actions workflow; no separate hosted ChatGPT API endpoint exists.
 
 See [controlled execution plan](docs/project_execution_plan.md) for the single source of truth on progress, acceptance criteria, blockers and run history.
 

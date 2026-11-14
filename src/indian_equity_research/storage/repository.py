@@ -173,6 +173,45 @@ class FinancialRepository:
         )
         return FinancialStatementSnapshot(symbol, period, observations)
 
+
+    def list_observations(self, *, symbol: str | None = None, basis: str | None = None,
+                          period_kind: str | None = None) -> tuple[FinancialObservation, ...]:
+        "Return source-aware observations in deterministic reporting-period order."
+        clauses: list[str] = []
+        params: list[str] = []
+        if symbol:
+            clauses.append("symbol = ?"); params.append(symbol.strip().upper())
+        if basis:
+            clauses.append("basis = ?"); params.append(basis)
+        if period_kind:
+            clauses.append("period_kind = ?"); params.append(period_kind)
+        query = "SELECT * FROM financial_observations"
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY symbol, basis, period_end, period_start, period_kind, source_name, metric"
+        with self._connect() as connection:
+            rows = connection.execute(query, params).fetchall()
+        output: list[FinancialObservation] = []
+        for row in rows:
+            period = FinancialPeriod(
+                start_date=date.fromisoformat(row["period_start"]),
+                end_date=date.fromisoformat(row["period_end"]),
+                kind=row["period_kind"], basis=row["basis"],
+                annualisation_factor=Decimal(row["annualisation_factor"]),
+            )
+            source = SourceReference(
+                source_name=row["source_name"], source_type=row["source_type"],
+                publication_date=date.fromisoformat(row["publication_date"]),
+                retrieved_at=datetime.fromisoformat(row["retrieved_at"]),
+                url=row["source_url"], reference_id=row["reference_id"] or None,
+            )
+            output.append(FinancialObservation(
+                symbol=row["symbol"], metric=row["metric"], value=Decimal(row["value"]),
+                unit=row["unit"], currency=row["currency"], period=period, source=source,
+                observation_kind=row["observation_kind"],
+            ))
+        return tuple(output)
+
     def count_observations(self) -> int:
         """Return the total number of stored observations."""
         with self._connect() as connection:

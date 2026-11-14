@@ -20,7 +20,7 @@ REQUIRED_COLUMNS = {
     "annualisation_factor", "source_name", "source_type",
     "publication_date", "retrieved_at", "observation_kind",
 }
-PERIOD_KINDS = {"quarter", "half_year", "year", "transition_period", "trailing_twelve_months"}
+PERIOD_KINDS = {"quarter", "half_year", "year", "transition_period", "instant", "trailing_twelve_months"}
 BASES = {"standalone", "consolidated"}
 SOURCE_TYPES = {"company_filing", "exchange_filing", "regulator", "provider", "other"}
 OBSERVATION_KINDS = {"reported", "calculated", "estimate"}

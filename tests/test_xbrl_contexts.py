@@ -108,3 +108,26 @@ def test_special_transition_period_is_resolved_from_issuer_metadata():
         "2024-10-01",
         "2026-03-31",
     ) == "quarter"
+
+
+def test_instant_context_selects_exact_date_populated_facts():
+    from indian_equity_research.ingestion.xbrl_contexts import choose_instant_context
+    contexts = {
+        "empty": {"type": "instant", "instant": date(2026, 9, 30)},
+        "balance": {"type": "instant", "instant": date(2026, 9, 30)},
+        "prior": {"type": "instant", "instant": date(2026, 3, 31)},
+        "duration": {"type": "duration", "start": date(2026, 7, 1), "end": date(2026, 9, 30)},
+    }
+    facts = {"Assets": {"balance": "1000"}, "Equity": {"balance": "600"}}
+    context_id, instant = choose_instant_context(contexts, date(2026, 9, 30), facts, ("Assets", "Equity"))
+    assert context_id == "balance"
+    assert instant == date(2026, 9, 30)
+
+
+def test_instant_context_requires_exact_date():
+    from indian_equity_research.ingestion.xbrl_contexts import choose_instant_context
+    with pytest.raises(ValueError, match="no instant context"):
+        choose_instant_context(
+            {"prior": {"type": "instant", "instant": date(2026, 3, 31)}},
+            date(2026, 9, 30),
+        )

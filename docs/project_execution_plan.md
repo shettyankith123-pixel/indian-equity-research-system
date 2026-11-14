@@ -333,3 +333,33 @@ Workflow run 43530539797 completed successfully on main commit d28acc4. The cove
 The uploaded single SQLite artifact was downloaded and queried directly; the MCX BSE URL and reference ID remain attached to its 24 rows.
 
 **Next:** run a full-universe diagnostic import for all 64 symbols with four latest quarterly and three annual periods per basis. Preserve any remaining issuer gaps in the coverage report; a successful workflow must not be treated as an all-64 acceptance unless each company has the required periods or an explicit exception/source fallback.
+
+
+## 11. Balance-sheet normalization and valuation implementation — 14 November 2026
+
+The worktree now contains the next analysis layer, ready for commit and GitHub CI validation:
+
+- XBRL duration contexts continue to hold income-statement and cash-flow facts. A separate exact-date instant-context selector now ingests assets, equity, liabilities, cash, current assets/liabilities, borrowings, inventories, receivables/payables and selected bank credit-quality/capital facts.
+- The observation model and CSV parser now support the explicit instant period kind. The SQLite repository exposes a source-aware observation query so reporting code can consume both bases without silently combining them.
+- Normalization groups observations by issuer, basis, source and filing reference. It matches balance-sheet facts from the same filing to each flow period; prior-year instant snapshots are used only for average-balance ROE/ROA. Missing debt components are not treated as zero.
+- Calculated metrics include margins, EBIT/EBITDA proxies, YoY revenue/PAT growth, CFO/PAT, CFO-minus-capex FCF proxy, net debt, debt/equity, current ratio, equity/assets, ROE and ROA, plus available bank-specific facts.
+- Valuation scenarios use justified P/B for banks and five-year FCFE-style DCF with sector assumptions for non-banks. P/E and EV/EBITDA are cross-checks only when at least three qualifying same-sector peers exist; EV/EBITDA also requires debt evidence. Models disclose assumptions and missing-data warnings.
+- The report builder writes normalized period history, a company coverage/fundamentals register, valuation register, generated research inputs and a conservative decision preview. Governance and overall quality scores remain blank pending qualitative review; this intentionally blocks BUY/ACCUMULATE rather than substituting financial ratios for governance.
+- A GitHub artifact downloader now accepts only successful runs with 64 unique coverage rows and at least 24 MCX BSE-source records in the same SQLite database, and records the artifact/run identifiers. The Research Command workflow invokes this fetch/build step before Wealth Scan, company, sector and opportunity commands.
+
+### Latest full-universe baseline before the instant-context change
+
+Workflow run 43530846091 completed successfully on commit 34bd48e, with 64 companies in the requested universe, filings for 63, 62 with quarter/half-year plus annual coverage, one transition-period issuer, and one issuer with no filings in the requested target periods. It stored 8,965 NSE observations plus 24 MCX BSE fallback observations (8,989 total). Noted exceptions were the L&T historical XBRL downloads returning no XML, a missing CGPOWER target annual filing, and Siemens's expected longer transition context not being disclosed in the attachment. This baseline uses the pre-instant-context importer and is not acceptance for the updated financial model.
+
+### New validation gates
+
+1. Commit the instant-context importer, normalization, valuation, artifact-fetcher and workflow changes.
+2. Run full repository CI.
+3. Re-run the 64-company import on the new commit and inspect all 64 coverage rows, source/period counts, balance-sheet instant fact coverage and all failures.
+4. Fetch the new artifact through the new validator; build the complete 64-stock report and inspect valuation-method and input completeness.
+5. Review governance, management quality, related-party matters, business-specific thesis risks, outside-watchlist candidates and IPOs before any actionable BUY/ACCUMULATE decision.
+6. Connect/verify the user-facing on-demand command route; retain no schedule until acceptance gates pass.
+
+The report-builder smoke test passed with 64 market quotes and a two-year HCLTECH test database: it generated all six expected registers, identified one company with provisional valuation, and kept all 64 decisions at ASSESS because governance/overall-quality review was deliberately absent. This is a pipeline smoke test, not the full 64-stock investment scan.
+
+No new full-universe acceptance is claimed until steps 1–4 above pass on the revised code.

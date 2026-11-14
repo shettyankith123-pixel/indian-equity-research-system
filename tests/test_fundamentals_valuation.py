@@ -1,0 +1,58 @@
+from datetime import date
+from decimal import Decimal as D
+from indian_equity_research.analytics.fundamentals import FundamentalPeriod,CompanyFundamentals
+from indian_equity_research.valuation.sector_valuation import value_universe,_dcf
+
+
+def period(symbol,end,metrics):
+ return FundamentalPeriod(symbol,"consolidated","NSE","https://example.com",None,date.fromisoformat(end),date(int(end[:4])-1,4,1),date.fromisoformat(end),"year",metrics,D("1"),tuple())
+
+
+def company(symbol,sector,annual):
+ return CompanyFundamentals(symbol,"consolidated",sector,annual[-1],tuple(annual),tuple(),D("70"),D("70"),D("70"),D("1"),annual[-1].publication_date,"NSE","https://example.com",tuple())
+
+
+def test_dcf_increases_with_growth_and_falls_with_cost_of_equity():
+ low=_dcf(D("100"),D("10"),D(".03"),D(".14"),D(".03"))
+ high=_dcf(D("100"),D("10"),D(".09"),D(".11"),D(".05"))
+ assert low is not None and high is not None and high>low
+
+
+def test_bank_fair_value_uses_justified_pb_scenarios():
+ annual=[]
+ for end,roe,equity in [("2024-03-31",D(".15"),D("1000")),("2025-03-31",D(".16"),D("1100")),("2026-03-31",D(".17"),D("1200"))]:
+  annual.append(period("BANK",end,{"return_on_equity":roe,"total_equity":equity}))
+ c=company("BANK","Banking",annual)
+ v=value_universe({"BANK":c},{"BANK":{"price_inr":D("100"),"market_cap_inr_crore":D("12000")}},{"BANK":"Banking"})["BANK"]
+ assert v.method.startswith("Justified P/B")
+ assert v.fair_value_low<v.fair_value_base<v.fair_value_high
+
+
+def test_nonbank_dcf_and_peer_multiples_use_peer_universe():
+ companies={};market={};sectors={s:"IT Services" for s in ["A","B","C","D"]}
+ for symbol,cap,price,fcf,pat,ebitda,netdebt in [
+  ("A",10000,100,300,400,500,100),("B",12000,120,350,450,550,150),
+  ("C",14000,140,380,480,600,200),("D",16000,160,420,520,650,250)]:
+  annual=[period(symbol,y,{"free_cash_flow_to_equity_proxy":D(fcf),"profit_after_tax":D(pat),"annualised_ebitda":D(ebitda),"net_debt":D(netdebt),"total_equity":D("1000")}) for y in ["2024-03-31","2025-03-31","2026-03-31"]]
+  companies[symbol]=company(symbol,"IT Services",annual)
+  market[symbol]={"price_inr":D(price),"market_cap_inr_crore":D(cap)}
+ result=value_universe(companies,market,sectors)["A"]
+ assert "FCFE DCF" in result.method
+ assert result.fair_value_low<result.fair_value_base<result.fair_value_high
+ assert result.cross_checks["peer_pe"] is not None
+ assert result.cross_checks["peer_ev_ebitda"] is not None
+
+
+def test_no_dcf_when_fcfe_history_missing():
+ annual=[period("X","2025-03-31",{"profit_after_tax":D("10")}),period("X","2026-03-31",{"profit_after_tax":D("11")})]
+ result=value_universe({"X":company("X","Industrials",annual)},{"X":{"price_inr":D("10"),"market_cap_inr_crore":D("100")}},{"X":"Industrials"})["X"]
+ assert result.fair_value_base is None
+
+
+def test_missing_net_debt_blocks_ev_ebitda_multiple():
+ companies={};market={};sectors={s:"Industrials" for s in ["A","B","C","D"]}
+ for symbol,cap,price in [("A",1000,10),("B",1200,12),("C",1400,14),("D",1600,16)]:
+  annual=[period(symbol,y,{"free_cash_flow_to_equity_proxy":D("20"),"profit_after_tax":D("30"),"annualised_ebitda":D("40"),"net_debt":None,"total_equity":D("100")}) for y in ["2024-03-31","2025-03-31","2026-03-31"]]
+  companies[symbol]=company(symbol,"Industrials",annual);market[symbol]={"price_inr":D(price),"market_cap_inr_crore":D(cap)}
+ result=value_universe(companies,market,sectors)
+ assert all(v.cross_checks["peer_ev_ebitda"] is None for v in result.values())

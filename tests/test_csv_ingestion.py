@@ -46,3 +46,8 @@ def test_missing_header_columns_fails(tmp_path: Path) -> None:
     result = parse_financial_csv(path)
     assert not result.observations
     assert "Missing required columns" in result.errors[0]
+
+
+def test_instant_period_kind_is_supported():
+    from indian_equity_research.ingestion.csv_loader import PERIOD_KINDS
+    assert "instant" in PERIOD_KINDS

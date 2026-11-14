@@ -467,6 +467,52 @@ def reconcile_duplicate_observations(
 
     return list(selected.values()), duplicate_count, list(conflicts.values())
 
+
+def previous_fiscal_year_end(period_end: date) -> date:
+    """Return the same fiscal-year end one calendar year earlier."""
+    try:
+        return period_end.replace(year=period_end.year - 1)
+    except ValueError:
+        # Handle a 29-Feb fiscal year end explicitly.
+        return period_end.replace(year=period_end.year - 1, day=28)
+
+
+def extract_previous_annual_comparative_observations(
+    symbol: str,
+    filing: dict[str, Any],
+    xml_text: str,
+    current_period_end: date,
+    retrieved_at: datetime,
+    imported_annual_periods: set[date],
+) -> tuple[list[FinancialObservation], dict[str, Any] | None, str]:
+    """Extract the previous full-year duration when it is not already imported.
+
+    Comparative facts retain the same filing reference as their source XBRL.
+    Only annual duration observations are returned; instant balance-sheet
+    comparatives are already imported by the primary extraction for this filing.
+    """
+    comparative_end = previous_fiscal_year_end(current_period_end)
+    if comparative_end in imported_annual_periods:
+        return [], None, ""
+    try:
+        observations, summary = extract_observations(
+            symbol, filing, xml_text, comparative_end, "year", retrieved_at
+        )
+    except ValueError as exc:
+        return [], None, str(exc)
+
+    comparative_flows = [
+        item for item in observations
+        if item.period.kind == "year" and item.period.end_date == comparative_end
+    ]
+    if not comparative_flows:
+        return [], None, f"No full-year comparative facts ending {comparative_end.isoformat()} were mapped."
+
+    summary["context_role"] = "comparative"
+    summary["current_filing_period_end"] = current_period_end.isoformat()
+    return comparative_flows, summary, ""
+
+
 def select_filing(rows: list[dict[str, Any]], target_end: date, basis: str) -> dict[str, Any] | None:
     by_date = [r for r in rows if filing_date(r) == target_end and row_basis(r) == basis]
     return latest_for_basis(by_date, basis)
@@ -521,6 +567,8 @@ def main() -> int:
             "half_year_filings": 0,
             "annual_filings": 0,
             "transition_period_filings": 0,
+            "comparative_annual_periods": 0,
+            "comparative_warnings": [],
             "observations": 0,
             "status": "",
             "errors": [],
@@ -564,11 +612,16 @@ def main() -> int:
                     if d <= annual_end and f"{d.month:02d}-{d.day:02d}" == fiscal_year_end
                 ][:max(1, args.annual_count)]
 
+                imported_annual_periods: set[date] = set()
                 for label, period_dates, period_kind in (
                     ("quarter", quarter_dates, "quarter"),
                     ("annual", annual_dates, "year"),
                 ):
-                    for target in period_dates:
+                    # Process older annual filings first so a newer filing's
+                    # comparative is used only when its own filing was absent
+                    # or failed to provide the annual period.
+                    targets = sorted(period_dates) if label == "annual" else period_dates
+                    for target in targets:
                         target_period_kind = period_kind_for_target(
                             target,
                             period_kind,
@@ -626,22 +679,51 @@ def main() -> int:
                             filing_summaries.append(summary)
                             row_coverage["observations"] += len(observations)
                             row_coverage[f"{stored_label}_filings"] += 1
+                            if stored_label == "annual" and summary.get("period_kind") == "year":
+                                imported_annual_periods.add(target)
                             print(
                                 f"  {label} {basis}: {summary['period_start']}..{summary['period_end']} "
                                 f"{len(observations)} observations",
                                 flush=True,
                             )
+
+                            if label == "annual" and target_period_kind == "year":
+                                comparative_observations, comparative_summary, comparative_warning = (
+                                    extract_previous_annual_comparative_observations(
+                                        symbol, filing, xbrl_cache[xbrl_url], target,
+                                        retrieved_at, imported_annual_periods,
+                                    )
+                                )
+                                if comparative_observations and comparative_summary:
+                                    all_observations.extend(comparative_observations)
+                                    filing_summaries.append(comparative_summary)
+                                    row_coverage["observations"] += len(comparative_observations)
+                                    row_coverage["comparative_annual_periods"] += 1
+                                    imported_annual_periods.add(
+                                        previous_fiscal_year_end(target)
+                                    )
+                                    print(
+                                        f"  annual {basis} comparative: "
+                                        f"{comparative_summary['period_start']}..{comparative_summary['period_end']} "
+                                        f"{len(comparative_observations)} observations",
+                                        flush=True,
+                                    )
+                                elif comparative_warning:
+                                    row_coverage["comparative_warnings"].append(comparative_warning)
                         except Exception as exc:
                             message = f"{stored_label}/{basis}/{target}: {type(exc).__name__}: {exc}"
                             row_coverage["errors"].append(message)
                             failures.append(f"{symbol} {message}")
                         time.sleep(max(0.0, args.delay_seconds))
 
-            if (row_coverage["quarter_filings"] or row_coverage["half_year_filings"]) and row_coverage["annual_filings"]:
+            annual_period_loaded = bool(
+                row_coverage["annual_filings"] or row_coverage["comparative_annual_periods"]
+            )
+            if (row_coverage["quarter_filings"] or row_coverage["half_year_filings"]) and annual_period_loaded:
                 row_coverage["status"] = "quarter_or_half_year_and_annual_loaded"
             elif (row_coverage["quarter_filings"] or row_coverage["half_year_filings"]) and row_coverage["transition_period_filings"]:
                 row_coverage["status"] = "quarter_or_half_year_and_transition_period_loaded"
-            elif row_coverage["quarter_filings"] or row_coverage["half_year_filings"] or row_coverage["annual_filings"] or row_coverage["transition_period_filings"]:
+            elif row_coverage["quarter_filings"] or row_coverage["half_year_filings"] or row_coverage["annual_filings"] or row_coverage["comparative_annual_periods"] or row_coverage["transition_period_filings"]:
                 row_coverage["status"] = "partial_period_coverage"
             elif row_coverage.get("listing_query") == "no_rows":
                 row_coverage["status"] = "filings_not_found_for_target_periods"
@@ -711,13 +793,14 @@ def main() -> int:
             })
 
     coverage_path = output_dir / "filing_coverage.csv"
-    coverage_fields = ["symbol", "issuer_name", "sector", "listing_ok", "listing_rows", "listing_query", "quarter_filings", "half_year_filings", "annual_filings", "transition_period_filings", "observations", "status", "errors"]
+    coverage_fields = ["symbol", "issuer_name", "sector", "listing_ok", "listing_rows", "listing_query", "quarter_filings", "half_year_filings", "annual_filings", "transition_period_filings", "comparative_annual_periods", "comparative_warnings", "observations", "status", "errors"]
     with coverage_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=coverage_fields)
         writer.writeheader()
         for row in coverage:
             row_copy = dict(row)
             row_copy["errors"] = " | ".join(row_copy.get("errors", []))
+            row_copy["comparative_warnings"] = " | ".join(row_copy.get("comparative_warnings", []))
             writer.writerow({key: row_copy.get(key, "") for key in coverage_fields})
 
     (output_dir / "filing_manifest.json").write_text(json.dumps(filing_summaries, indent=2, default=str), encoding="utf-8")
@@ -727,10 +810,12 @@ def main() -> int:
     summary = {
         "retrieved_at": retrieved_at.isoformat(),
         "universe_count": len(companies),
-        "company_count_with_any_filing": sum(1 for r in coverage if r["quarter_filings"] or r["half_year_filings"] or r["annual_filings"] or r["transition_period_filings"]),
+        "company_count_with_any_filing": sum(1 for r in coverage if r["quarter_filings"] or r["half_year_filings"] or r["annual_filings"] or r["comparative_annual_periods"] or r["transition_period_filings"]),
         "quarter_company_count": sum(1 for r in coverage if r["quarter_filings"]),
         "half_year_company_count": sum(1 for r in coverage if r["half_year_filings"]),
         "annual_company_count": sum(1 for r in coverage if r["annual_filings"]),
+        "comparative_annual_company_count": sum(1 for r in coverage if r["comparative_annual_periods"]),
+        "comparative_annual_period_count": sum(r["comparative_annual_periods"] for r in coverage),
         "transition_period_company_count": sum(1 for r in coverage if r["transition_period_filings"]),
         "observation_count": inserted,
         "raw_observation_count": raw_observation_count,
@@ -747,7 +832,7 @@ def main() -> int:
     print(json.dumps(summary, indent=2))
     if args.fail_on_missing and (
         summary["quarter_company_count"] + summary["half_year_company_count"] < len(companies)
-        or summary["annual_company_count"] + summary["transition_period_company_count"] < len(companies)
+        or sum(1 for row in coverage if row["annual_filings"] or row["comparative_annual_periods"] or row["transition_period_filings"]) < len(companies)
     ):
         return 2
     if inserted == 0:

@@ -30,7 +30,9 @@ def test_balance_sheet_facts_are_matched_to_instant_period():
  assert p.metrics["total_equity"]==D("300")
  assert p.metrics["total_debt"]==D("120")
  assert p.metrics["debt_to_equity"]==D(".4")
- assert p.metrics["free_cash_flow_to_equity_proxy"]==D("70")
+ assert p.metrics["levered_free_cash_flow_proxy"]==D("70")
+ assert p.metrics["net_borrowing"]==D("30")
+ assert p.metrics["free_cash_flow_to_equity"]==D("100")
  assert p.metrics["return_on_equity"]==D("100")/D("275")
 
 

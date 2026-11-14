@@ -65,6 +65,16 @@ def main() -> int:
     repo=FinancialRepository(args.db)
     observations=repo.list_observations()
     normalized=normalize_financial_observations(observations)
+    instant_observations=[o for o in observations if o.period.kind=="instant"]
+    instant_symbols={o.symbol for o in instant_observations}
+    latest_instant_by_symbol={}
+    instant_metric_symbols={}
+    for observation in instant_observations:
+        latest_instant_by_symbol[observation.symbol]=max(
+            latest_instant_by_symbol.get(observation.symbol,observation.period.end_date),
+            observation.period.end_date,
+        )
+        instant_metric_symbols.setdefault(observation.metric,set()).add(observation.symbol)
     companies={}; basis_used={}
     for symbol,record in universe.items():
         primary=build_company_fundamentals(normalized,symbol=symbol,sector=record.get("sector","Unclassified"),basis="consolidated")
@@ -161,13 +171,30 @@ def main() -> int:
     counts={}
     for row in decision_rows:
         rec=row["recommendation"];counts[rec]=counts.get(rec,0)+1
+    valuation_method_counts={}
+    for result in valuations.values():
+        valuation_method_counts[result.method]=valuation_method_counts.get(result.method,0)+1
+    latest_period_end_by_symbol={
+        symbol:company.latest_period.period_end
+        for symbol,company in companies.items() if company.latest_period is not None
+    }
     summary={
         "universe_count":len(universe),
         "market_quote_count":sum(1 for s in universe if market.get(s,{}).get("price_inr") is not None),
         "companies_with_financial_history":sum(1 for c in companies.values() if c.latest_period is not None),
         "companies_with_2plus_annual_periods":sum(1 for c in companies.values() if len(c.annual_periods)>=2),
         "companies_with_3plus_annual_periods":sum(1 for c in companies.values() if len(c.annual_periods)>=3),
+        "companies_with_any_instant_balance_sheet":len(instant_symbols),
+        "companies_with_instant_balance_sheet_at_latest_period":sum(
+            1 for symbol in instant_symbols
+            if latest_instant_by_symbol.get(symbol)==latest_period_end_by_symbol.get(symbol)
+        ),
+        "instant_balance_sheet_observation_count":len(instant_observations),
+        "instant_balance_sheet_metric_symbol_counts":{
+            metric:len(symbols) for metric,symbols in sorted(instant_metric_symbols.items())
+        },
         "companies_with_provisional_fair_value":sum(1 for v in valuations.values() if v.fair_value_base is not None),
+        "valuation_method_counts":valuation_method_counts,
         "financial_observation_count":len(observations),
         "normalized_period_count":len(normalized),
         "decision_counts":counts,"held_symbols":sorted(held),

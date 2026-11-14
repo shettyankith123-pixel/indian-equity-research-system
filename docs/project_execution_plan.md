@@ -373,3 +373,8 @@ The first complete 64-issuer attempt on the instant-context importer reached iss
 - Conflicting values/units for the same source key are quarantined, recorded in the failure list and that issuer's coverage errors, while non-conflicting observations continue to load.
 - The summary records raw facts, imported facts, identical duplicate count and conflicting fact count.
 - The duplicate rules have focused unit tests; full CI and a fresh full-universe import must still pass before acceptance.
+
+
+### Report coverage counters — 14 November 2026
+
+The research report builder now separately reports the count of issuers with any instant balance-sheet facts, the count whose latest flow period has a same-date balance-sheet snapshot, total instant observation count, symbol breadth per balance-sheet metric and valuation-method counts. A 64-universe smoke test with one issuer/two annual periods and 12 instant facts showed these counts serialize correctly and left all 64 decisions at ASSESS until governance/quality review.

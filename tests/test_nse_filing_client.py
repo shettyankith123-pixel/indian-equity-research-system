@@ -52,8 +52,8 @@ def test_all_pages_are_fetched_using_total_count_and_rows_are_deduplicated():
     client = FakeNSEClient(
         {
             "pages": {
-                1: {"data": [{"seq_Id": 1}, {"seq_Id": 2}], "totalCount": 3, "page": 1, "size": 2},
-                2: {"data": [{"seq_Id": 2}, {"seq_Id": 3}], "totalCount": 3, "page": 2, "size": 2},
+                1: {"data": [{"seq_Id": 1}, {"seq_Id": 2}], "totalCount": 4, "page": 1, "size": 2},
+                2: {"data": [{"seq_Id": 2}, {"seq_Id": 3}], "totalCount": 4, "page": 2, "size": 2},
             }
         },
         {"data": []},
@@ -68,7 +68,7 @@ def test_all_pages_are_fetched_using_total_count_and_rows_are_deduplicated():
         "start_page": 1,
         "pages_fetched": 2,
         "page_size": 2,
-        "reported_total_count": 3,
+        "reported_total_count": 4,
         "raw_rows": 4,
         "unique_rows": 3,
         "duplicates_removed": 1,

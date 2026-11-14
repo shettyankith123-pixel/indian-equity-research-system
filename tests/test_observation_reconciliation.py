@@ -5,7 +5,15 @@ from indian_equity_research.models.financials import (
 )
 from importlib.util import spec_from_file_location
 from pathlib import Path
+from types import ModuleType
 import sys
+
+# The duplicate-reconciliation helper does not call NSE, so keep this unit test
+# offline and independent of the optional production nse-xbrl dependency.
+nse_stub = ModuleType("nse_xbrl")
+nse_stub.NSEClient = object
+nse_stub.parse_xbrl = lambda value: {}
+sys.modules.setdefault("nse_xbrl", nse_stub)
 
 script = Path(__file__).resolve().parents[1] / "scripts" / "ingest_nse_integrated_filings.py"
 spec = spec_from_file_location("ies_ingestion_script", script)

@@ -1,9 +1,17 @@
 from datetime import date
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
+import sys
 
-from scripts.build_financial_coverage_report import (
-    build_fcfe_audit,
-    has_three_consecutive_years,
-)
+_script_path = Path(__file__).resolve().parents[1] / "scripts" / "build_financial_coverage_report.py"
+_spec = spec_from_file_location("build_financial_coverage_report", _script_path)
+assert _spec is not None and _spec.loader is not None
+_module = module_from_spec(_spec)
+sys.modules[_spec.name] = _module
+_spec.loader.exec_module(_module)
+
+build_fcfe_audit = _module.build_fcfe_audit
+has_three_consecutive_years = _module.has_three_consecutive_years
 
 
 def _observation(symbol, metric, value, start, end, kind, reference):

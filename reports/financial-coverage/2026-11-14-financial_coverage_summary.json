@@ -1,0 +1,12 @@
+{
+  "run_id": "github-43652209994",
+  "company_count": 64,
+  "company_count_with_any_filing": 63,
+  "companies_with_3plus_consolidated_annual_periods": 0,
+  "companies_with_3_consecutive_verified_fcfe_years": 0,
+  "bank_sector_valuation_exceptions": 2,
+  "status_counts": {
+    "INSUFFICIENT_ANNUAL_HISTORY": 62,
+    "NOT_APPLICABLE_BANK_VALUATION": 2
+  }
+}

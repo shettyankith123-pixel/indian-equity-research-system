@@ -101,3 +101,14 @@ Poll run `43652209994`. When it succeeds, download its artifact once, execute `s
 - **M3 — Valuation and decision engine:** sector-specific valuation, scenarios, sensitivity, fair value and entries; every stock receives a defensible decision or a specific missing-evidence status.
 - **M4 — Investor-facing Wealth Scan:** full 64-stock decisions, actual holdings distinctions, best current opportunities, wait triggers, risk and concentration review, capital plan only with current cash/holding data, outside-watchlist ideas and comparison to prior scan.
 - **M5 — Broader intelligence and learning:** global/Indian news, sector developments, IPOs, outside-watchlist discovery and research-outcome tracking against relevant market/sector benchmarks.
+
+
+## 2026-11-15 — First investor-facing holdings research checkpoint
+- Added reports/wealth-scan/holdings-research-batch-2026-11-15.md.
+- Retrieved live INDmoney Indian equity holdings directly; seven holdings confirmed: TCS (5), POWERGRID (10), SBIN (2), ICICIBANK (1), NMDC (15), VBL (1), MOTHERSON (2).
+- Holdings value ₹20,165; invested ₹19,975.38; unrealised P&L +₹189.62; TCS weight 59.7%.
+- Researched all seven holdings using latest available 13-Nov-2026 NSE close, Q2 FY27 / Q3 CY26 company results, current market valuation snapshots and INDmoney analyst/news feed.
+- Preliminary action labels: TCS HOLD (no add due concentration); POWERGRID ACCUMULATE GRADUALLY; SBI ACCUMULATE GRADUALLY; ICICI Bank HOLD (add only on pullback); NMDC HOLD/WAIT; VBL WAIT; MOTHERSON HOLD.
+- Important limitation: no intrinsic fair value or formal governance certification assigned; annual true-FCFE coverage and full management/governance work remain incomplete. Analyst targets are not treated as fair value.
+- Overall completion remains 34%. This is a tangible first-pass research deliverable, but it does not satisfy full 64-stock financial/quality/valuation acceptance criteria.
+- Next milestone: complete the remaining 57 stocks by sector, then formal governance/management checks and sector-specific bear/base/bull valuation before promoting provisional calls.

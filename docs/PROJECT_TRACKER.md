@@ -179,3 +179,13 @@ Poll run `43652209994`. When it succeeds, download its artifact once, execute `s
 - NMDC was already screened as a current holding; therefore 9/16 Cyclical names now have first-pass coverage. Remaining: TATASTEEL, COALINDIA, HINDZINC, BHEL, TATAPOWER, GAIL and ONGC.
 - Provisional labels: DALBHARAT WAIT; SRF ACCUMULATE GRADUALLY ON WEAKNESS; NAVINFLUOR WAIT; FLUOROCHEM WAIT; DEEPAKNTR HOLD/ACCUMULATE AFTER CASH-FLOW CONFIRMATION; PIIND WAIT; HINDALCO ACCUMULATE GRADUALLY; JSWSTEEL HOLD/WAIT.
 - Total first-pass universe coverage now stands at 48/64. Overall project completion remains 34% because full annual-FCFE, governance and intrinsic valuation acceptance gates remain open.
+
+
+## 2026-11-15 — Cyclical group first-pass complete
+- Added reports/wealth-scan/cyclical-batch-2-2026-11-15.md.
+- Completed preliminary screens for TATASTEEL, COALINDIA, HINDZINC, BHEL, TATAPOWER, GAIL and ONGC.
+- All 16 configured Cyclical names now have first-pass screens, including NMDC covered earlier as an actual holding.
+- Provisional labels: TATASTEEL HOLD/WAIT; COALINDIA ACCUMULATE GRADUALLY; HINDZINC HOLD/ACCUMULATE ONLY ON CORRECTIONS; BHEL WAIT; TATAPOWER HOLD/WAIT; GAIL HOLD/WAIT; ONGC ACCUMULATE GRADUALLY.
+- Total first-pass universe coverage now stands at 55/64: all 20 Core Long-Term names, all 19 Growth & Compounders names, all 16 Cyclical names.
+- Overall project completion remains 34%; financial-history/FCFE, governance and intrinsic valuation gates are still open.
+- Next milestone: screen the nine Special Situations names: CDSL, ANANDRATHI, BSE, MCX, LALPATHLAB, UNITDSPR, UBL, BRITANNIA and ZENSARTECH.

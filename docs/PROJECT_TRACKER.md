@@ -3,7 +3,7 @@
 Last checkpoint: 2026-11-15 (Asia/Dubai)
 Repository: https://github.com/shettyankith123-pixel/indian-equity-research-system
 Branch: main
-Current reviewed commit: f0b103aec116c40319e4ffa773621d858b47f60a
+Current reviewed commit: a6d471d89d0c5850a3bdfe46335f129b38e80bed
 
 ## Operating agreement
 - Work in milestones and deliver investor-facing outputs, not endless code churn.
@@ -15,6 +15,8 @@ Current reviewed commit: f0b103aec116c40319e4ffa773621d858b47f60a
 - Keep BUY/ACCUMULATE gates strict. Missing evidence remains visible as ASSESS/OBSERVE/WAIT as appropriate.
 - User mandate: moderate-to-high risk tolerance, 7–10-year horizon, long-term wealth creation; actively seek opportunities and stage entries without manufacturing BUY calls.
 - Work here is synchronous. Do not promise background execution or later delivery.
+
+- Master first-pass report: reports/wealth-scan/wealth_scan_2026-11-15.md
 
 ## Overall completion
 <current_score>39%</current_score>

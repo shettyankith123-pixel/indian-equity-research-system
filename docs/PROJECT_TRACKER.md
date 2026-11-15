@@ -123,3 +123,13 @@ Poll run `43652209994`. When it succeeds, download its artifact once, execute `s
 - This is holdings-only, not the full 64-stock Wealth Scan. No independent fair values or cash allocation were invented. Governance diligence and intrinsic valuation remain open.
 - Completion score updated conservatively from 34% to **36%**: company-quality/thesis work 1/20 → 2/20 (partial; 7 holdings only, governance checks incomplete); investor-facing Wealth Scan/action plan 3/10 → 4/10 (actual holdings and concentration now incorporated). Other workstreams unchanged.
 - Next milestone: research the full 64-stock universe by sector; complete board/auditor/related-party/pledge checks and sector-specific valuation before permitting final BUY/ACCUMULATE calls.
+
+
+## 2026-11-15 — Core Long-Term watchlist research checkpoint
+- Added reports/wealth-scan/core-watchlist-batch-1-2026-11-15.md.
+- Completed preliminary, evidence-linked screens for HCLTECH, POLYCAB, ULTRACEMCO, PIDILITIND, M&M, MARUTI, APOLLOHOSP and SUNPHARMA.
+- Combined first-pass coverage now stands at 15/64 names: seven confirmed account holdings plus eight watchlist-only Core Long-Term names.
+- Provisional labels in this batch: HCLTECH ACCUMULATE ON DIPS; POLYCAB ACCUMULATE ON CORRECTIONS; ULTRACEMCO HOLD/WAIT; PIDILITE WAIT; M&M ACCUMULATE GRADUALLY; MARUTI WAIT; APOLLOHOSP HOLD/WAIT; SUNPHARMA HOLD/WAIT.
+- No intrinsic fair values or formal governance verdicts were assigned. Primary-source verification of selected legal/regulatory items remains open.
+- Overall project completion remains 34%; first-pass screening does not satisfy the full 64-stock annual-FCFE, governance and valuation acceptance criteria.
+- Next milestone: complete INFY, BAJFINANCE, LT, NTPC and RELIANCE before moving to the next sector group.

@@ -3,7 +3,7 @@
 Last checkpoint: 2026-11-15 (Asia/Dubai)
 Repository: https://github.com/shettyankith123-pixel/indian-equity-research-system
 Branch: main
-Current reviewed commit: 7bfa4aaed024ec5d612db963b2457a3210cda9a5
+Current reviewed commit: f0b103aec116c40319e4ffa773621d858b47f60a
 
 ## Operating agreement
 - Work in milestones and deliver investor-facing outputs, not endless code churn.
@@ -17,9 +17,9 @@ Current reviewed commit: 7bfa4aaed024ec5d612db963b2457a3210cda9a5
 - Work here is synchronous. Do not promise background execution or later delivery.
 
 ## Overall completion
-<current_score>34%</current_score>
+<current_score>39%</current_score>
 
-The score stays at 34% until actual 64-company financial coverage and FCFE results are produced. Code implementation, green CI and workflow setup alone do not increase the investor-facing completion percentage.
+The score increases only when usable end-to-end investor-facing capability is delivered. The 64-stock first-pass research screen is now complete, but it does not satisfy the outstanding annual financial history/FCFE, full governance or intrinsic valuation gates.
 
 ### Fixed weights (100 total)
 | Workstream | Weight | Evidence needed for full credit |
@@ -32,17 +32,17 @@ The score stays at 34% until actual 64-company financial coverage and FCFE resul
 | Opportunity discovery, news/IPO/sector intelligence | 10% | Evidence-based outside-watchlist opportunities, IPO coverage and tested news/company mapping |
 | Research memory, impact validation and reliability | 10% | Saved original calls; T+1/T+3/T+5/T+10/T+20 outcome checks; benchmark comparison and reliable refresh/freshness |
 
-### Baseline breakdown — still the current score
+### Current weighted completion breakdown
 | Workstream | Earned | Current evidence |
 |---|---:|---|
 | Platform and data foundation | 15/15 | Repo, 64-stock universe, quote snapshots, market ingestion, CLI/SQLite foundation and CI |
 | Financial history and FCFE | 4/20 | Importer, true-FCFE formula and pagination implementation exist; full-universe annual/FCFE coverage not yet proven |
-| Company quality and governance | 1/20 | Decision gates exist; repeatable management/governance/thesis evidence layer is not populated |
+| Company quality and governance | 4/20 | Preliminary sourced business/thesis/risk/invalidation screens now cover all 64; full management, board, auditor, promoter and related-party diligence remains incomplete |
 | Valuation and decision engine | 7/15 | Sector valuation and deterministic decision rules exist; no completed fair values in the inspected Wealth Scan |
-| Wealth Scan and portfolio action | 3/10 | 64-row report/register exists, but inspected report has 64 ASSESS |
+| Wealth Scan and portfolio action | 5/10 | Current holdings are verified and all 64 names have provisional research/action labels; certified fair values, buy zones and cash-based allocation remain incomplete |
 | Opportunity/news/IPO intelligence | 2/10 | Templates/framework and event/news structures exist; complete automated workflow is not built |
 | Research memory/performance | 2/10 | Event-study and EOD foundation exist; longitudinal call scorecard not complete |
-| **Total** | **34/100** | **Functioning research foundation, not yet an investment-ready decision product** |
+| **Total** | **39/100** | **64-stock first-pass research exists; still not a fully certified investment decision product** |
 
 ## What was verified before this development session
 - Latest baseline code commit inspected: `a8777a5804a6e07d83ce48fea18024ec7334d482`.
@@ -81,16 +81,16 @@ These prove unit tests and workflow syntax/configuration checks pass. They do no
 - Branch: main; code SHA: `c753bf8493d0d60cf60349a6e952435befa04254`
 - Parameters: all 64 symbols; 4 quarterly periods and 3 annual periods per reporting basis.
 - Last verified status: `in_progress`, job `ingest-financials`; the financial-fetch/normalization step was still running.
-- This run started before the FCFE audit workflow step was committed. Its artifact will contain the normalized CSV and filing coverage but not the new FCFE report; run the audit script once manually against its artifact after it completes.
+- This run started before the FCFE audit workflow step was committed. Its artifact contains normalized financial data and filing coverage but not the new FCFE report.
 - Do not dispatch another full import unless this run fails or the artifact is corrupt/missing. Do not re-run the whole import merely to attach the audit step.
-- After the artifact is downloaded, analyze the real files and save the reports/checkpoint. Future scheduled/manual imports will include the audit automatically.
+- Artifact was downloaded and audited once. It contained 14,049 raw observations, 12,807 normalized observations, 64 coverage rows, 63 issuers with filings and no duplicate fact conflicts. Most issuers still had only two consolidated annual periods; three consecutive verified true-FCFE years were not established. The generated coverage audit outputs were not committed in this checkpoint. Future scheduled/manual imports include the audit automatically.
 
 ## M1 acceptance criteria still outstanding
-1. Confirm the current run finishes successfully and upload artifact exists.
-2. Produce a coverage matrix for all configured 64 symbols: annual dates, consolidated/standalone, transition periods, filing refs, conflicts and exact errors.
+1. DONE — run 43652209994 completed successfully and artifact 14137300185 was retrieved.
+2. DONE — 64-symbol coverage matrix was generated and inspected; the audit showed sparse annual-period availability and no duplicate fact conflicts. Commit the generated machine-readable and Markdown audit outputs.
 3. Calculate strict true-FCFE for each annual period and verify three consecutive years wherever applicable. Record missing CFO/capex/current debt/prior debt facts separately.
 4. Route banks/financial institutions to sector-appropriate valuation, with explicit reasons.
-5. Commit the human-readable report, machine-readable CSV/JSON and updated tracker.
+5. PARTIAL — tracker and research reports are committed; the original coverage CSV/JSON/Markdown audit outputs still need to be recovered and committed.
 6. Only then increase the financial-history workstream score and overall percentage.
 
 ## Next action
@@ -189,3 +189,14 @@ Poll run `43652209994`. When it succeeds, download its artifact once, execute `s
 - Total first-pass universe coverage now stands at 55/64: all 20 Core Long-Term names, all 19 Growth & Compounders names, all 16 Cyclical names.
 - Overall project completion remains 34%; financial-history/FCFE, governance and intrinsic valuation gates are still open.
 - Next milestone: screen the nine Special Situations names: CDSL, ANANDRATHI, BSE, MCX, LALPATHLAB, UNITDSPR, UBL, BRITANNIA and ZENSARTECH.
+
+
+## 2026-11-15 — Special Situations group first-pass complete; 64/64 screening milestone
+- Added reports/wealth-scan/special-situations-batch-2026-11-15.md.
+- Completed preliminary screens for CDSL, ANANDRATHI, BSE, MCX, LALPATHLAB, UNITDSPR, UBL, BRITANNIA and ZENSARTECH.
+- All four configured watchlist groups have first-pass coverage: Core Long-Term 20/20; Growth & Compounders 19/19; Cyclical 16/16; Special Situations 9/9. Together these are all 64 unique configured symbols. The seven current account holdings are explicitly distinguished from watchlist-only names.
+- Provisional labels are recorded in the group reports with latest 13-Nov-2026 market snapshots, latest Q2 FY27/Q3 CY26 results, valuation context, business thesis, risks and invalidation/watch items. These are screening decisions, not certified intrinsic-value BUY calls.
+- CDSL's ₹1 crore SEBI penalty for operational/IT control failures is a confirmed material governance issue; other regulatory/legal leads are explicitly flagged for primary-source review.
+- Overall completion updated from 36% to 39%: Company-quality/thesis work 2/20 → 4/20 (preliminary business/thesis/risk/invalidation coverage now spans all 64; formal management/governance diligence remains incomplete); Wealth Scan/action plan 4/10 → 5/10 (64-stock provisional action register and actual-holdings distinction now exist; intrinsic fair values, buy zones and cash-based allocation remain open). Other workstreams unchanged.
+- Remaining major work: commit the full-universe financial coverage audit outputs; establish three consecutive verified true-FCFE years where applicable; complete management/governance evidence; build sector-appropriate bear/base/bull valuation and entry zones; create outside-watchlist opportunity/IPO/news intelligence; start T+1/T+3/T+5/T+10/T+20 outcome tracking.
+- Next milestone: formal management/governance and valuation pass, prioritising the current holdings and the strongest provisional ACCUMULATE candidates. Do not restart infrastructure work unless it directly resolves a blocker to investor-facing research.

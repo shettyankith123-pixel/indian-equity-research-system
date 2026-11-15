@@ -133,3 +133,13 @@ Poll run `43652209994`. When it succeeds, download its artifact once, execute `s
 - No intrinsic fair values or formal governance verdicts were assigned. Primary-source verification of selected legal/regulatory items remains open.
 - Overall project completion remains 34%; first-pass screening does not satisfy the full 64-stock annual-FCFE, governance and valuation acceptance criteria.
 - Next milestone: complete INFY, BAJFINANCE, LT, NTPC and RELIANCE before moving to the next sector group.
+
+
+## 2026-11-15 — Core Long-Term watchlist research checkpoint 2
+- Added reports/wealth-scan/core-watchlist-batch-2-2026-11-15.md.
+- Completed preliminary screens for INFY, BAJFINANCE, LT, NTPC and RELIANCE.
+- First-pass coverage now stands at 20/64 configured names: seven actual holdings plus 13 additional watchlist-only names.
+- Provisional labels: INFY WAIT; BAJFINANCE HOLD/WAIT; LT HOLD/ACCUMULATE ONLY ON CORRECTIONS; NTPC ACCUMULATE GRADUALLY; RELIANCE ACCUMULATE GRADUALLY.
+- News/legal items requiring primary verification are explicitly flagged, not treated as confirmed risk scores.
+- Overall completion remains 34%; full financial-history/FCFE, governance and intrinsic valuation gates are not yet met.
+- Next: continue sector groups after this Core Long-Term batch; then formal governance and valuation passes.

@@ -153,3 +153,11 @@ Poll run `43652209994`. When it succeeds, download its artifact once, execute `s
 - First-pass total across the 64-stock universe now stands at 23/64 (seven actual holdings plus 16 additional watchlist-only names). Note overlap: the Core Long-Term group has 20 names and four are already included in the seven account holdings.
 - Overall project completion remains 34%; full annual-FCFE, governance and intrinsic valuation gates are still unmet.
 - Next milestone: begin the Growth/Compounders group.
+
+
+## 2026-11-15 — Growth & Compounders research checkpoint 1
+- Added reports/wealth-scan/growth-compounders-batch-1-2026-11-15.md.
+- Completed preliminary screens for ASTRAL, SUPREMEIND, KEI, HDFCAMC, CAMS, MANKIND, TVSMOTOR and RADICO.
+- MOTHERSON and VBL were already screened as current holdings; thus 10/19 Growth & Compounders names now have first-pass coverage. Remaining: OFSS, COFORGE, PERSISTENT, SIEMENS, ABB, CUMMINSIND, CGPOWER, HAL and BEL.
+- Provisional labels: ASTRAL WAIT; SUPREMEIND ACCUMULATE ON CORRECTIONS; KEI ACCUMULATE GRADUALLY ON WEAKNESS; HDFCAMC HOLD/WAIT; CAMS ACCUMULATE ON CORRECTIONS; MANKIND WAIT; TVSMOTOR HOLD/WAIT; RADICO WAIT.
+- Total first-pass universe coverage now 31/64 (23 prior plus eight in this batch). Overall project completion remains 34% because full FCFE, governance and intrinsic valuation acceptance gates are still unmet.

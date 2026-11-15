@@ -171,3 +171,11 @@ Poll run `43652209994`. When it succeeds, download its artifact once, execute `s
 - Total first-pass universe coverage now stands at 40/64: all 20 Core Long-Term names, all 19 Growth & Compounders names, plus NMDC from the Cyclical group.
 - Overall project completion remains 34%; full annual-FCFE, governance and intrinsic valuation acceptance gates are still unmet.
 - Next milestone: begin the 16-name Cyclical group.
+
+
+## 2026-11-15 — Cyclical research checkpoint 1
+- Added reports/wealth-scan/cyclical-batch-1-2026-11-15.md.
+- Completed preliminary screens for DALBHARAT, SRF, NAVINFLUOR, FLUOROCHEM, DEEPAKNTR, PIIND, HINDALCO and JSWSTEEL.
+- NMDC was already screened as a current holding; therefore 9/16 Cyclical names now have first-pass coverage. Remaining: TATASTEEL, COALINDIA, HINDZINC, BHEL, TATAPOWER, GAIL and ONGC.
+- Provisional labels: DALBHARAT WAIT; SRF ACCUMULATE GRADUALLY ON WEAKNESS; NAVINFLUOR WAIT; FLUOROCHEM WAIT; DEEPAKNTR HOLD/ACCUMULATE AFTER CASH-FLOW CONFIRMATION; PIIND WAIT; HINDALCO ACCUMULATE GRADUALLY; JSWSTEEL HOLD/WAIT.
+- Total first-pass universe coverage now stands at 48/64. Overall project completion remains 34% because full annual-FCFE, governance and intrinsic valuation acceptance gates remain open.

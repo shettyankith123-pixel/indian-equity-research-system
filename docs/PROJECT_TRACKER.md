@@ -143,3 +143,13 @@ Poll run `43652209994`. When it succeeds, download its artifact once, execute `s
 - News/legal items requiring primary verification are explicitly flagged, not treated as confirmed risk scores.
 - Overall completion remains 34%; full financial-history/FCFE, governance and intrinsic valuation gates are not yet met.
 - Next: continue sector groups after this Core Long-Term batch; then formal governance and valuation passes.
+
+
+## 2026-11-15 — Core Long-Term group first-pass complete
+- Added reports/wealth-scan/core-watchlist-batch-3-2026-11-15.md.
+- Completed preliminary screens for MARICO, HINDUNILVR and ITC.
+- All 20 configured Core Long-Term names now have a preliminary screen: four are actual holdings (TCS, SBIN, ICICIBANK, POWERGRID); 16 are watchlist-only.
+- Provisional labels in this batch: MARICO WAIT; HINDUNILVR ACCUMULATE GRADUALLY ON CORRECTIONS; ITC ACCUMULATE GRADUALLY.
+- First-pass total across the 64-stock universe now stands at 23/64 (seven actual holdings plus 16 additional watchlist-only names). Note overlap: the Core Long-Term group has 20 names and four are already included in the seven account holdings.
+- Overall project completion remains 34%; full annual-FCFE, governance and intrinsic valuation gates are still unmet.
+- Next milestone: begin the Growth/Compounders group.

@@ -161,3 +161,13 @@ Poll run `43652209994`. When it succeeds, download its artifact once, execute `s
 - MOTHERSON and VBL were already screened as current holdings; thus 10/19 Growth & Compounders names now have first-pass coverage. Remaining: OFSS, COFORGE, PERSISTENT, SIEMENS, ABB, CUMMINSIND, CGPOWER, HAL and BEL.
 - Provisional labels: ASTRAL WAIT; SUPREMEIND ACCUMULATE ON CORRECTIONS; KEI ACCUMULATE GRADUALLY ON WEAKNESS; HDFCAMC HOLD/WAIT; CAMS ACCUMULATE ON CORRECTIONS; MANKIND WAIT; TVSMOTOR HOLD/WAIT; RADICO WAIT.
 - Total first-pass universe coverage now 31/64 (23 prior plus eight in this batch). Overall project completion remains 34% because full FCFE, governance and intrinsic valuation acceptance gates are still unmet.
+
+
+## 2026-11-15 — Growth & Compounders group first-pass complete
+- Added reports/wealth-scan/growth-compounders-batch-2-2026-11-15.md.
+- Completed preliminary screens for OFSS, COFORGE, PERSISTENT, SIEMENS, ABB, CUMMINSIND, CGPOWER, HAL and BEL.
+- All 19 configured Growth & Compounders names now have first-pass coverage, including MOTHERSON and VBL screened earlier as actual holdings.
+- Provisional labels: OFSS ACCUMULATE ON CORRECTIONS; COFORGE HOLD/WAIT; PERSISTENT WAIT; SIEMENS HOLD/WAIT; ABB WAIT; CUMMINSIND WAIT; CGPOWER WAIT; HAL HOLD/WAIT; BEL ACCUMULATE ONLY ON CORRECTIONS.
+- Total first-pass universe coverage now stands at 40/64: all 20 Core Long-Term names, all 19 Growth & Compounders names, plus NMDC from the Cyclical group.
+- Overall project completion remains 34%; full annual-FCFE, governance and intrinsic valuation acceptance gates are still unmet.
+- Next milestone: begin the 16-name Cyclical group.

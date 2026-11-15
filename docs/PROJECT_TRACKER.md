@@ -112,3 +112,14 @@ Poll run `43652209994`. When it succeeds, download its artifact once, execute `s
 - Important limitation: no intrinsic fair value or formal governance certification assigned; annual true-FCFE coverage and full management/governance work remain incomplete. Analyst targets are not treated as fair value.
 - Overall completion remains 34%. This is a tangible first-pass research deliverable, but it does not satisfy full 64-stock financial/quality/valuation acceptance criteria.
 - Next milestone: complete the remaining 57 stocks by sector, then formal governance/management checks and sector-specific bear/base/bull valuation before promoting provisional calls.
+
+
+## 2026-11-15 checkpoint — first actual holdings research tranche
+- Retrieved current Indian-stock holdings from connected INDmoney: 7 holdings, ₹20,165 market value, ₹19,975.38 invested, +₹189.62 unrealised P&L, -₹237.21 one-day change.
+- TCS is 59.70% of the Indian-stock book; Power Grid 12.77%, SBI 10.71%, ICICI Bank 7.85%, NMDC 5.19%, Varun Beverages 2.15%, Motherson 1.63%.
+- Completed provisional position/company reviews for all 7 holdings using latest Q2 FY27 / Q3 CY2026 results, company releases, account market snapshot and recent news. Saved all 7 analyses to INDmoney; all confirmed saved=true and data_verified=true.
+- Durable report: `reports/wealth-scan/holding-review-2026-11-15.md`.
+- Portfolio actions: TCS HOLD / no additions due to concentration; SBI ACCUMULATE in tranches; Power Grid selective ACCUMULATE with sizing discipline; ICICI HOLD / wait; NMDC, VBL and Motherson HOLD / WAIT.
+- This is holdings-only, not the full 64-stock Wealth Scan. No independent fair values or cash allocation were invented. Governance diligence and intrinsic valuation remain open.
+- Completion score updated conservatively from 34% to **36%**: company-quality/thesis work 1/20 → 2/20 (partial; 7 holdings only, governance checks incomplete); investor-facing Wealth Scan/action plan 3/10 → 4/10 (actual holdings and concentration now incorporated). Other workstreams unchanged.
+- Next milestone: research the full 64-stock universe by sector; complete board/auditor/related-party/pledge checks and sector-specific valuation before permitting final BUY/ACCUMULATE calls.
